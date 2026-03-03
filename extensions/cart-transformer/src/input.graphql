@@ -1,0 +1,34 @@
+query RunInput {
+  cart {
+    lines {
+      id
+      quantity
+      cost {
+        amountPerQuantity {
+          amount
+          currencyCode
+        }
+      }
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            id
+            bundleGroups: metafield(
+              namespace: "$app:bundle_groups"
+              key: "bundle_groups"
+            ) {
+              value
+            }
+          }
+        }
+      }
+      bundleParentProductId: attribute(key: "_bundle_parent_product_id") {
+        value
+      }
+      bundleGroupId: attribute(key: "_bundle_group_id") {
+        value
+      }
+    }
+  }
+}

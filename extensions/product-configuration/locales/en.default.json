@@ -1,4 +1,7 @@
 {
-  "name": "product-configuration",
-  "welcome": "Welcome to the {{target}} extension!"
+  "name": "Bundle Groups",
+  "description": "Configure product bundle groups with discounts",
+  "groupRemoved": "Group removed successfully",
+  "productRemoved": "Product removed successfully",
+  "configSaved": "Configuration saved successfully"
 }

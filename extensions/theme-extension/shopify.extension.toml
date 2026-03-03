@@ -1,3 +1,7 @@
-name = "theme-extension"
-type = "theme"
+api_version = "2026-04"
+type = "theme_app_extension"
+
+[[extensions]]
+name = "Bundle Picker"
+handle = "bundle-picker"
 uid = "65b30aae-2fc0-9b48-3e28-e6bf3e801b92f9c75ad7"

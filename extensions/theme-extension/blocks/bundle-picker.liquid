@@ -1,0 +1,51 @@
+{%- assign bundle_meta = product.metafields['app--product-group-bundler']['bundle_groups'] -%}
+{%- if bundle_meta != blank -%}
+  {%- assign bundle_data = bundle_meta.value -%}
+  
+  <div
+    class="pgb-bundle-picker"
+    data-product-id="{{ product.id }}"
+    data-product-gid="gid://shopify/Product/{{ product.id }}"
+    data-bundle-config='{{ bundle_data | json | escape }}'
+    data-locale="{{ request.locale.iso_code }}"
+    data-layout="{{ block.settings.layout }}"
+  >
+    <noscript>
+      <p>Please enable JavaScript to view bundle offers.</p>
+    </noscript>
+  </div>
+
+  {{ 'bundle-picker.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'bundle-picker.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Bundle Picker",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading_en",
+      "label": "Heading (English)",
+      "default": "Add extras"
+    },
+    {
+      "type": "text",
+      "id": "heading_fr",
+      "label": "Heading (Français)",
+      "default": "Ajoutez des extras"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "list", "label": "List" },
+        { "value": "grid", "label": "Grid" }
+      ],
+      "default": "list"
+    }
+  ]
+}
+{% endschema %}

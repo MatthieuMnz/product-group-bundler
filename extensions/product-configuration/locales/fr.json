@@ -1,4 +1,7 @@
 {
-  "name": "product-configuration",
-  "welcome": "Bienvenue dans l'extension {{target}}!"
+  "name": "Groupes d'offres groupées",
+  "description": "Configurez des groupes de produits avec des réductions",
+  "groupRemoved": "Groupe supprimé avec succès",
+  "productRemoved": "Produit supprimé avec succès",
+  "configSaved": "Configuration enregistrée avec succès"
 }

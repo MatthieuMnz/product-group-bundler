@@ -1,10 +1,12 @@
 {
-  "ratings": {
-    "stars": {
-      "label": "Ratings"
-    },
-    "home": {
-      "recommendationText": "Recommended Product!"
-    }
+  "bundle": {
+    "heading": "Add extras",
+    "originalPrice": "{{ price }}",
+    "discountedPrice": "{{ price }}",
+    "discountBadge": "Save {{ amount }}",
+    "discountBadgePercent": "Save {{ percent }}%",
+    "selectVariant": "Select an option",
+    "selected": "Selected",
+    "outOfStock": "Out of stock"
   }
 }

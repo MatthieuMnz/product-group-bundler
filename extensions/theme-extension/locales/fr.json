@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "heading": "Ajoutez des extras",
+    "originalPrice": "{{ price }}",
+    "discountedPrice": "{{ price }}",
+    "discountBadge": "Économisez {{ amount }}",
+    "discountBadgePercent": "Économisez {{ percent }} %",
+    "selectVariant": "Sélectionnez une option",
+    "selected": "Sélectionné",
+    "outOfStock": "Rupture de stock"
+  }
+}

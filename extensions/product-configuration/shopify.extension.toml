@@ -1,19 +1,15 @@
-api_version = "2025-10"
-[[extensions]]
-name = "t:name"
-handle = "product-configuration"
+api_version = "2026-04"
 type = "ui_extension"
-uid = "1417fe2d-35ff-0a3a-ce8e-5402c29d5028ba17097d"
 
-# Both extension points are required
-[[extensions.targeting]]
-module = "./src/ProductDetailsConfigurationExtension.jsx"
-target = "admin.product-details.configuration.render"
-[extensions.targeting.urls]
-edit = "/bundles/products/{product_id}"
+[[extensions]]
+name = "Bundle Groups"
+handle = "bundle-group-manager"
+description = "Configure product bundle groups with discounts"
 
+  [[extensions.targeting]]
+  target = "admin.product-details.configuration.render"
+  module = "./src/BlockExtension.tsx"
 
-[[extensions.targeting]]
-module = "./src/ProductVariantDetailsConfigurationExtension.jsx"
-# The target used here must match the target used in the module file (./src/ProductVariantDetailsConfigurationExtension.jsx)
-target = "admin.product-variant-details.configuration.render"
+[extensions.capabilities]
+api_access = true
+block_progress = false

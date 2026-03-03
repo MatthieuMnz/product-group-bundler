@@ -7,6 +7,7 @@
     "shopify": "npm exec -- shopify",
     "typegen": "npm exec -- shopify app function typegen",
     "build": "npm exec -- shopify app function build",
+    "build:function": "tsc --outDir dist && npx --yes javy compile dist/run.js -o dist/index.wasm",
     "preview": "npm exec -- shopify app function run",
     "test": "vitest",
     "test:unit": "vitest run src/"
