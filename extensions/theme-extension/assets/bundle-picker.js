@@ -61,12 +61,7 @@ function renderGroups(container, config, productData, locale, currencySymbol, st
             const firstVariant = data.variants[0];
             const origPrice = (firstVariant.price / 100).toFixed(2);
 
-            let newPrice;
-            if (prod.discountType === 'percentage') {
-                newPrice = (origPrice * (1 - prod.discountValue / 100)).toFixed(2);
-            } else {
-                newPrice = Math.max(0, origPrice - prod.discountValue).toFixed(2);
-            }
+            const newPrice = Math.max(0, origPrice - prod.discountValue).toFixed(2);
 
             html += `
         <label class="pgb-product-card">
@@ -132,7 +127,7 @@ function interceptAddToCart(mainProductGid, state) {
                     items.push({
                         id: item.variantId,
                         quantity: item.quantity,
-                        parent_id: parentUid,
+                        parent_id: mainVariantId,
                         properties: {
                             "_bundle_parent_product_id": mainProductGid,
                             "_bundle_group_id": groupId

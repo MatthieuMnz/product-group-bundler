@@ -20,7 +20,7 @@
                             "product": {
                                 "id": "gid://shopify/Product/10",
                                 "bundleGroups": {
-                                    "value": "{\"version\":1,\"groups\":[{\"id\":\"group-1\",\"name\":{\"en\":\"Accessories\",\"fr\":\"Accessoires\"},\"sortOrder\":0,\"products\":[{\"productId\":\"gid://shopify/Product/20\",\"handle\":\"product-b\",\"variantIds\":[],\"discountType\":\"fixed_amount\",\"discountValue\":10},{\"productId\":\"gid://shopify/Product/30\",\"handle\":\"product-c\",\"variantIds\":[],\"discountType\":\"percentage\",\"discountValue\":15}]}]}"
+                                    "value": "{\"version\":1,\"groups\":[{\"id\":\"group-1\",\"name\":{\"en\":\"Accessories\",\"fr\":\"Accessoires\"},\"sortOrder\":0,\"products\":[{\"productId\":\"gid://shopify/Product/20\",\"handle\":\"product-b\",\"variantIds\":[],\"discountValue\":10},{\"productId\":\"gid://shopify/Product/30\",\"handle\":\"product-c\",\"variantIds\":[],\"discountValue\":15}]}]}"
                                 }
                             }
                         },
@@ -98,7 +98,7 @@
                         "price": {
                             "adjustment": {
                                 "fixedPricePerUnit": {
-                                    "amount": "68.00"
+                                    "amount": "65.00"
                                 }
                             }
                         }

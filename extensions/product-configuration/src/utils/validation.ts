@@ -21,9 +21,6 @@ export function validateConfig(config: BundleConfig, currentProductId: string): 
       if (product.discountValue < 0) {
         errors.push(`La valeur de la remise doit être supérieure ou égale à zéro.`);
       }
-      if (product.discountType === 'percentage' && product.discountValue > 100) {
-        errors.push(`La remise en pourcentage ne peut pas dépasser 100 %.`);
-      }
     });
 
     // Check for duplicates in same group
