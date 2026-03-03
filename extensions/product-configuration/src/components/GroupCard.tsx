@@ -43,6 +43,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
         handle: p.handle,
         title: p.title,
         variantIds: [],
+        discountType: 'fixed_amount',
         discountValue: 0,
       }));
 

@@ -104,30 +104,41 @@ function renderGroups(container, config, productData, locale, currencySymbol, st
 
 function interceptAddToCart(mainProductGid, state) {
     const forms = document.querySelectorAll('form[action*="/cart/add"]');
+    if (forms.length === 0) {
+        console.warn("PGB: No add-to-cart forms found on this page.");
+    }
+
     forms.forEach(form => {
         form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            // Collect main item
             const formData = new FormData(form);
             const mainVariantId = formData.get('id');
             const mainQty = formData.get('quantity') || 1;
 
-            const parentUid = 'parent_' + Date.now();
+            // Only intercept if bundle items are selected
+            const hasSelections = Object.values(state.selections).some(group => group.length > 0);
+            if (!hasSelections) return;
+
+            e.preventDefault();
+            console.log("PGB: Intercepting add to cart for bundle items...");
+
+            if (!mainVariantId) {
+                console.error("PGB: Could not find main product variant ID in the form.");
+                form.submit(); // Fallback to normal behavior
+                return;
+            }
 
             const items = [{
-                id: mainVariantId,
-                quantity: parseInt(mainQty, 10),
-                properties: { "_uid": parentUid }
+                id: parseInt(mainVariantId, 10),
+                quantity: parseInt(mainQty, 10)
             }];
 
             // Collect bundled items
             Object.keys(state.selections).forEach(groupId => {
                 state.selections[groupId].forEach(item => {
                     items.push({
-                        id: item.variantId,
-                        quantity: item.quantity,
-                        parent_id: mainVariantId,
+                        id: parseInt(item.variantId, 10),
+                        quantity: parseInt(item.quantity, 10),
+                        parent_id: parseInt(mainVariantId, 10),
                         properties: {
                             "_bundle_parent_product_id": mainProductGid,
                             "_bundle_group_id": groupId
@@ -135,6 +146,8 @@ function interceptAddToCart(mainProductGid, state) {
                     });
                 });
             });
+
+            console.log("PGB: Submission payload:", { items });
 
             // Submit
             try {
@@ -146,12 +159,19 @@ function interceptAddToCart(mainProductGid, state) {
 
                 if (res.ok) {
                     const cartData = await res.json();
+                    console.log("PGB: Items added successfully", cartData);
                     document.dispatchEvent(new CustomEvent('pgb:added-to-cart', { detail: { items: cartData.items } }));
-                    // Optional: redirect to cart or open drawer
+                    // Success! Redirecting to cart
                     window.location.href = '/cart';
+                } else {
+                    const error = await res.json();
+                    console.error("PGB: Failed to add products to cart", error);
+                    // Fallback: submit original form (at least add main product)
+                    // But maybe user wants to know it failed.
+                    alert("Erreur lors de l'ajout au panier. Veuillez réessayer.");
                 }
             } catch (err) {
-                console.error("Failed to add bundle to cart", err);
+                console.error("PGB: Network error when adding bundle to cart", err);
             }
         });
     });

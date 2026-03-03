@@ -1,0 +1,15 @@
+api_version = "2025-07"
+
+[[extensions]]
+uid = "cef5dbbc-d3b6-a189-11bc-73ef4d5aa9f82a1e08ac"
+type = "ui_extension"
+name = "Bundle Groups Block"
+handle = "bundle-group-block"
+description = "Display product bundle information"
+
+  [[extensions.targeting]]
+  target = "admin.product-details.block.render"
+  module = "./src/BlockExtension.tsx"
+
+[extensions.capabilities]
+api_access = true

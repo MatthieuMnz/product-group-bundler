@@ -4,6 +4,7 @@ interface BundleProduct {
   productId: string;
   handle?: string;
   variantIds: string[];
+  discountType: "fixed_amount" | "percentage";
   discountValue: number;
 }
 
@@ -81,8 +82,14 @@ export function run(input: RunInput): FunctionRunResult {
 
     // Calculate and apply discount
     const originalPrice = parseFloat(line.cost.amountPerQuantity.amount);
+    let newPrice = originalPrice;
 
-    const newPrice = Math.max(0, originalPrice - bundleProduct.discountValue);
+    if (bundleProduct.discountType === "percentage") {
+      newPrice = Math.max(0, originalPrice * (1 - bundleProduct.discountValue / 100));
+    } else {
+      newPrice = Math.max(0, originalPrice - bundleProduct.discountValue);
+    }
+
     operations.push({
       update: {
         cartLineId: line.id,

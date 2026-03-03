@@ -2,11 +2,12 @@
 import {
   reactExtension,
   useApi,
-  AdminBlock,
+  AdminAction,
   BlockStack,
   Button,
   InlineStack,
   Text,
+  Banner,
 } from '@shopify/ui-extensions-react/admin';
 import { useState } from 'react';
 import { useBundleConfig } from './hooks/useBundleConfig';
@@ -15,12 +16,13 @@ import { GroupCard } from './components/GroupCard';
 import { generateId, validateConfig } from './utils/validation';
 import { BundleGroup } from './utils/types';
 
-const TARGET = 'admin.product-details.block.render';
+const TARGET = 'admin.product-details.action.render';
 
 export default reactExtension(TARGET, () => <App />);
 
 function App() {
-  const { data, i18n } = useApi(TARGET as any);
+  const api = useApi();
+  const { data, i18n, close } = api as any;
   const productId = (data as any)?.selected?.[0]?.id || "gid://shopify/Product/0";
 
   const { config, isLoading, saveConfig, setConfig } = useBundleConfig(productId);
@@ -30,9 +32,9 @@ function App() {
 
   if (isLoading) {
     return (
-      <AdminBlock title={i18n.translate('blockTitle')}>
+      <AdminAction title={i18n.translate('blockTitle')} primaryAction={<Button disabled>{i18n.translate('save')}</Button>}>
         <Text>{i18n.translate('saving')}</Text>
-      </AdminBlock>
+      </AdminAction>
     );
   }
 
@@ -48,6 +50,7 @@ function App() {
     setIsSaving(true);
     try {
       await saveConfig(config);
+      close();
     } catch (e: any) {
       setErrors([e.message || i18n.translate('error')]);
     } finally {
@@ -91,14 +94,26 @@ function App() {
   };
 
   return (
-    <AdminBlock title={i18n.translate('blockTitle')}>
+    <AdminAction
+      title={i18n.translate('blockTitle')}
+      primaryAction={
+        <Button variant="primary" loading={isSaving} onClick={handleSave}>
+          {i18n.translate('save')}
+        </Button>
+      }
+      secondaryAction={
+        <Button onClick={close}>Cancel</Button>
+      }
+    >
       <BlockStack gap="base">
         {errors.length > 0 && (
-          <BlockStack gap="base">
-            {errors.map((err, i) => (
-              <Text tone="critical" key={i}>• {err}</Text>
-            ))}
-          </BlockStack>
+          <Banner tone="critical">
+            <BlockStack gap="extraTight">
+              {errors.map((err, i) => (
+                <Text key={i}>• {err}</Text>
+              ))}
+            </BlockStack>
+          </Banner>
         )}
 
         {config?.groups.length === 0 ? (
@@ -117,15 +132,12 @@ function App() {
               />
             ))}
 
-            <InlineStack blockAlignment="center" inlineAlignment="space-between">
+            <InlineStack inlineAlignment="center">
               <Button onClick={handleAddGroup}>{i18n.translate('addGroup')}</Button>
-              <Button variant="primary" loading={isSaving} onClick={handleSave}>
-                {i18n.translate('save')}
-              </Button>
             </InlineStack>
           </BlockStack>
         )}
       </BlockStack>
-    </AdminBlock>
+    </AdminAction>
   );
 }
