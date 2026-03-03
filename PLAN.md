@@ -14,7 +14,7 @@
 3. [Data Model](#3-data-model)
 4. [App Configuration](#4-app-configuration-shopifyapptoml)
 5. [Extensions](#5-extensions)
-   - [Admin Block Extension](#51-admin-block-extension)
+   - [Product Configuration Extension](#51-product-configuration-extension)
    - [Theme App Extension](#52-theme-app-extension)
    - [Cart Transform Function](#53-cart-transform-function)
 6. [App Backend](#6-app-backend-react-router)
@@ -40,7 +40,7 @@ A Shopify app with three extensions working together:
 
 | Layer | Extension | Role |
 |-------|-----------|------|
-| **Admin** | Admin Block (`admin.product-details.block.render`) | Merchant configures bundle groups directly on the product page in Shopify Admin |
+| **Admin** | Product Configuration Extension | Merchant configures bundle groups directly in the "Bundled products" card on the product page |
 | **Storefront** | Theme App Extension (Liquid + JS) | Displays the bundle group picker on the product page; hooks into add-to-cart |
 | **Cart** | Cart Transform Function (Shopify Function) | Validates and applies bundle discounts server-side at cart/checkout time |
 
@@ -53,7 +53,7 @@ All bundle configuration lives in a **single JSON metafield on each product** �
 │  MERCHANT (Admin)                                                   │
 │                                                                     │
 │  1. Opens a product in Shopify Admin                                │
-│  2. Sees the "Bundle Groups" admin block                            │
+│  2. Sees the "Bundled products" card (Product Config Ext)           │
 │  3. Creates groups (e.g. "Accessoires", "Outils")                   │
 │  4. Adds products to each group with a discount                     │
 │  5. Saves → metafield written on the product                        │
@@ -67,15 +67,15 @@ All bundle configuration lives in a **single JSON metafield on each product** �
 │  3. Checks Product B (Accessory, −$10) and Product D (Tool, −15%)  │
 │  4. Selects variants if needed                                      │
 │  5. Clicks the existing "Add to Cart" button                        │
-│  6. Cart receives: Product A + Product B + Product D                │
-│     (each with `_bundle_parent_id` line property)                   │
+│  6. Cart receives Product A and Product B + D as                    │
+│     Native Nested Cart Lines (using `parent_id` API)                │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │  CART / CHECKOUT (Server-side)                                      │
 │                                                                     │
 │  1. Cart Transform function runs                                    │
-│  2. For each line with `_bundle_parent_id`:                         │
+│  2. For each nested child line in the cart (via `bundleParentProductId`): │
 │     a. Finds the parent product line in the cart                    │
 │     b. Reads the parent's `bundle_groups` metafield                 │
 │     c. Validates the child product exists in the config             │
@@ -94,7 +94,7 @@ All bundle configuration lives in a **single JSON metafield on each product** �
                     │    Shopify Admin          │
                     │                           │
                     │  ┌─────────────────────┐  │
-                    │  │  Admin Block Ext.   │  │─── reads/writes ──► Product Metafield
+                    │  │ Product Config Ext. │  │─── reads/writes ──► Product Metafield
                     │  │  (React, UI Ext.)   │  │                     `$app:bundle_groups`
                     │  └─────────────────────┘  │                          │
                     └──────────────────────────┘                           │
@@ -271,18 +271,23 @@ All bundle configuration lives in a **single JSON metafield on each product** �
 }
 ```
 
-### 3.2 Cart Line Properties
+### 3.2 Native Nested Cart Lines & Properties
 
-When a customer selects a bundle product and adds to cart, the following **line item properties** are set on each bundled line (not the main product):
+The app uses Shopify's native **Nested Cart Lines** feature (supported in Checkout UI Extensions 2025-10+ and the Cart AJAX API). When a customer adds a bundle to the cart, the items are linked at the platform level.
 
-| Property Key | Value | Purpose |
-|-------------|-------|---------|
-| `_bundle_parent_id` | Product GID of the parent product (e.g. `gid://shopify/Product/999`) | Links the child line to its parent for Cart Transform validation |
-| `_bundle_group_id` | Group UUID from the metafield | Identifies which group this product belongs to (for display purposes) |
+| Tracking Method | Property/Value | Purpose |
+|-----------------|--------------|---------|
+| **Native Link** | `parent_id` (AJAX API) | Tells Shopify to nest the bundle item visually under the parent item in the Cart, Checkout, and Order views. |
+| **Line Property** | `_bundle_parent_product_id` | Product GID of the parent (e.g. `gid://shopify/Product/999`). Helps the Cart Transform quickly fetch the right metafield. |
+| **Line Property** | `_bundle_group_id` | Group UUID from the metafield. Identifies which discount rule applies. |
 
-Properties prefixed with `_` are hidden from the customer in the default Shopify cart/checkout UI.
+Native nested lines are automatically removed if the parent is removed. They are visually grouped in supported themes and checkouts. Properties prefixed with `_` are hidden from the customer.
 
 > **Important:** The discount amount is **never** sent from the client. The Cart Transform function reads the discount exclusively from the parent product's metafield. Line properties are only used to establish the parent-child relationship.
+
+### 3.4 Cart Transform Object (Initialization)
+
+To enable the Cart Transform function on a storefront, the app needs to create a `CartTransform` object via GraphQL mutation during the setup process. This links the function to the shop.
 
 ### 3.3 Prisma Schema (App Database)
 
@@ -322,6 +327,8 @@ model Session {
 ```
 
 No additional models are needed for v1. If analytics or bulk management is desired later, models can be added.
+
+> **Note:** We must also store the ID of the `CartTransform` object created via `cartTransformCreate` in the database or check it dynamically, ensuring it remains active.
 
 ---
 
@@ -383,16 +390,16 @@ description = "Configuration for product bundle groups (accessories, tools, etc.
 
 ## 5. Extensions
 
-### 5.1 Admin Block Extension
+### 5.1 Product Configuration Extension
 
-**Target:** `admin.product-details.block.render`
-**Purpose:** Let the merchant configure bundle groups directly on a product page in Shopify Admin.
+**Target:** `admin.product-details.configuration.render` (or standard product config target)
+**Purpose:** Let the merchant configure bundle groups directly on a product page inside the "Bundled products" card in Shopify Admin.
 **Tech:** React + Shopify Admin UI Extensions API + Polaris admin components
 
 #### Generation Command
 
 ```bash
-pnpm shopify app generate extension --template admin_block --name bundle-group-manager
+pnpm shopify app generate extension --template product_configuration --name bundle-group-manager
 ```
 
 #### Configuration (`shopify.extension.toml`)
@@ -407,7 +414,7 @@ handle = "bundle-group-manager"
 description = "Configure product bundle groups with discounts"
 
   [[extensions.targeting]]
-  target = "admin.product-details.block.render"
+  target = "admin.product-details.configuration.render"
   module = "./src/BlockExtension.tsx"
 
 [extensions.capabilities]
@@ -622,7 +629,8 @@ The JS file is a self-contained module that:
    - Prevents default form submission.
    - Builds a payload with the main product + selected bundle products.
    - Calls `POST /cart/add.js` with the `items[]` array.
-   - Each bundle item includes `properties: { _bundle_parent_id: "gid://…", _bundle_group_id: "uuid" }`.
+   - Assigns a unique temporary ID to the main product item, and uses it as the `parent_id` for each bundle item to create native **Nested Cart Lines**.
+   - Sets `_bundle_parent_product_id` and `_bundle_group_id` as hidden properties on children.
    - On success: triggers cart drawer/redirect (dispatches a custom event for the theme to handle).
 
 **Storefront product data fetching:**
@@ -635,9 +643,9 @@ The block needs to show product titles, images, prices, and variants for the bun
 | **Storefront API** (GraphQL) | Batch query, use product IDs directly | Requires Storefront Access Token |
 | **Liquid pre-render** | No JS fetch needed, fastest | Requires `all_products[handle]` or section rendering API; limited |
 
-**Recommended approach:** Use the AJAX API with product handles. Store handles alongside IDs in the metafield (add a `handle` field to each product entry). This avoids needing a Storefront Access Token and works with a simple `fetch()`.
+**Recommended approach for bundles:** Use the AJAX API with product handles. Store handles alongside IDs in the metafield (add a `handle` field to each product entry). This avoids needing a Storefront Access Token and works with a simple `fetch()`.
 
-Alternatively, enhance the metafield to include a denormalized snapshot of each product's essential data (title, handle, image URL, price, variants) — written by the admin block at save time. This eliminates storefront API calls entirely and makes the block render instantly. The trade-off is data staleness; a webhook (`products/update`) can re-sync the snapshot.
+Alternatively, enhance the metafield to include a denormalized snapshot of each product's essential data (title, handle, image URL, price, variants) — written by the admin extension at save time. This eliminates storefront API calls entirely and makes the block render instantly. The trade-off is data staleness; a webhook (`products/update`) can re-sync the snapshot.
 
 For v1, the **AJAX API approach with handles** is simplest. Add `handle` to the metafield product entries.
 
@@ -747,6 +755,8 @@ handle = "bundle-discount"
   details = "/app/bundle-settings/:id"
 ```
 
+> **Crucial Setup Step:** After deploying the cart transform extension, the app backend **must** execute the `cartTransformCreate` GraphQL mutation via the Admin API to activate this function on the shop. It doesn't run automatically unconfigured.
+
 #### Input Query (`src/input.graphql`)
 
 ```graphql
@@ -775,7 +785,7 @@ query Input {
           }
         }
       }
-      bundleParentId: attribute(key: "_bundle_parent_id") {
+      bundleParentProductId: attribute(key: "_bundle_parent_product_id") {
         value
       }
       bundleGroupId: attribute(key: "_bundle_group_id") {
@@ -842,7 +852,7 @@ export function run(input: RunInput): FunctionRunResult {
 
   // Process bundled lines
   for (const line of input.cart.lines) {
-    const parentIdAttr = line.bundleParentId?.value;
+    const parentIdAttr = line.bundleParentProductId?.value;
     const groupIdAttr = line.bundleGroupId?.value;
 
     if (!parentIdAttr || !groupIdAttr) continue;
@@ -914,8 +924,8 @@ export function run(input: RunInput): FunctionRunResult {
 
 | Scenario | Behavior |
 |----------|----------|
-| Parent product removed from cart | Bundled items lose their discount (parent not found in cart) |
-| Invalid `_bundle_parent_id` property | Ignored (no matching parent) |
+| Parent product removed from cart | Bundled items are automatically removed by Shopify (Nested Cart Lines behavior) |
+| Invalid `_bundle_parent_product_id` | Ignored (no matching parent) |
 | Tampered discount value (client-side) | Irrelevant — discount is read from metafield, not line properties |
 | Product not in the group config | Ignored (no matching entry) |
 | Variant not allowed | Ignored (variant not in `variantIds` list) |
@@ -951,12 +961,13 @@ Built with Polaris web components (`<s-page>`, `<s-card>`, `<s-text>`, etc.).
 
 ### 6.3 API Endpoints
 
-The admin block extension communicates directly with the Shopify Admin API (via `admin.graphql()` in the extension). The app backend does **not** need custom API endpoints for bundle CRUD.
+The admin extension communicates directly with the Shopify Admin API (via `admin.graphql()` in the extension). The app backend does **not** need custom API endpoints for bundle CRUD.
 
-However, the app backend may provide:
+However, the app backend **must** handle the following:
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
+| `/api/bundles/setup-function` | POST | Call `cartTransformCreate` to register the active Cart Transform function for the shop. |
 | `/api/bundles/products` | GET | (Optional) List products with bundle configs for the dashboard |
 | `/api/bundles/validate` | POST | (Optional) Validate a bundle config JSON before saving |
 
@@ -981,20 +992,21 @@ Collects: main product variant ID + quantity
 Collects: selected bundle products (variant IDs, group IDs)
         │
         ▼
-Builds payload:
+Builds payload (Cart AJAX API):
 {
-  items: [
-    { id: mainVariantId, quantity: 1 },
-    { id: bundleVariantId1, quantity: 1,
-      properties: {
-        _bundle_parent_id: "gid://shopify/Product/…",
-        _bundle_group_id: "uuid"
-      }
+  "items": [
+    { 
+      "id": mainVariantId, 
+      "quantity": 1,
+      "properties": { "_uid": "unique123" } 
     },
-    { id: bundleVariantId2, quantity: 1,
-      properties: {
-        _bundle_parent_id: "gid://shopify/Product/…",
-        _bundle_group_id: "uuid"
+    { 
+      "id": bundleVariantId1, 
+      "quantity": 1,
+      "parent_id": "unique123", 
+      "properties": {
+        "_bundle_parent_product_id": "gid://shopify/Product/…",
+        "_bundle_group_id": "uuid"
       }
     }
   ]
@@ -1023,21 +1035,11 @@ Theme handles UI update (cart drawer, count, redirect)
 
 ### 7.2 Cart Display Considerations
 
-In the cart, bundled items appear as **separate line items** with their discounted price. They are not merged into a single bundle line. This keeps the UX transparent and simple.
+By utilizing Shopify's **Nested Cart Lines** feature via `parent_id`, grouped items will naturally nest underneath their parent product in supported themes and checkouts. 
 
-The cart template can optionally check for `_bundle_parent_id` in line properties to:
-- Display a "Bundle discount" badge
-- Group bundled items visually under the parent
-- Show the original price with a strikethrough
+The cart uses `_bundle_parent_product_id` and the Cart Transform applies discounts on the child line items transparently while keeping the parent relationship intact.
 
-**Example Liquid in cart template (optional enhancement):**
-```liquid
-{%- for item in cart.items -%}
-  {%- if item.properties['_bundle_parent_id'] -%}
-    <span class="pgb-badge">{{ 'bundle.badge' | t }}</span>
-  {%- endif -%}
-{%- endfor -%}
-```
+*(Note: The legacy approach required custom Liquid logic in the cart to check properties and render badges. Native nested cart lines automatically reflect this relationship).*
 
 ### 7.3 Theme Integration Hooks
 
@@ -1059,13 +1061,13 @@ All user-facing strings are translated into English (default) and French.
 
 | Layer | i18n Method |
 |-------|-------------|
-| **Admin Block Extension** | `locales/en.default.json` + `locales/fr.json` — standard Shopify extension i18n |
+| **Product Config Extension** | `locales/en.default.json` + `locales/fr.json` — standard Shopify extension i18n |
 | **Theme App Extension** | `locales/en.default.json` + `locales/fr.json` — Liquid `t` filter and JS access via `Shopify.locale` |
 | **Cart Transform Function** | N/A (no user-facing strings) |
 | **App Backend** | Polaris components respect the admin locale; custom strings via a simple i18n helper |
 | **Metafield data** | Group names stored as `{ "en": "…", "fr": "…" }` objects; storefront JS picks the right locale |
 
-### Admin Block Extension Locale Files
+### Product Config Extension Locale Files
 
 **`locales/en.default.json`:**
 ```json
@@ -1196,7 +1198,7 @@ product-group-bundler/
 │
 ├── extensions/
 │   │
-│   ├── bundle-group-manager/                 # ── Admin Block Extension ──
+│   ├── bundle-group-manager/                 # ── Product Config Extension ──
 │   │   ├── src/
 │   │   │   ├── BlockExtension.tsx            # Main React component
 │   │   │   ├── components/
@@ -1266,7 +1268,7 @@ product-group-bundler/
 |--------|------------|
 | **Tampered line properties** — customer modifies `_bundle_parent_id` or discount values via browser | Cart Transform reads discount from the metafield (server-side source of truth), not from line properties. Invalid parent IDs are silently ignored. |
 | **Inflated discount** — customer crafts a request with a higher discount | Discount values are never sent from the client. Cart Transform extracts them from the product metafield. |
-| **Self-referencing bundle** — product added to its own bundle | Admin block prevents this at config time; Cart Transform also ignores if child product ID equals parent product ID. |
+| **Self-referencing bundle** — product added to its own bundle | Config extension prevents this at config time; Cart Transform also ignores if child product ID equals parent product ID. |
 | **Removed parent** — bundle item exists without its parent in the cart | Cart Transform only applies discount if the parent product is present in the cart. |
 | **Stale metafield** — metafield was updated but cart still has old line properties | Line properties only reference IDs, not discount amounts. The function always reads the current metafield value. |
 | **XSS in metafield JSON** — malicious data in group names | Liquid's `escape` filter sanitizes output; JS uses `textContent` or DOM APIs, not `innerHTML`. |
@@ -1289,7 +1291,7 @@ product-group-bundler/
 |---------|---------------|
 | Cart Transform `lineUpdate` (price changes) | **Shopify Plus** or **Development store** |
 | Theme app extensions | Any plan with Online Store |
-| Admin block extensions | Any plan |
+| Product configuration extensions | Any plan |
 | Shopify Functions | Shopify plan with app support |
 
 > **Critical:** The `lineUpdate` operation for price adjustment requires **Shopify Plus** (or a development store). This is a Shopify platform restriction. If the store is not on Plus, an alternative approach using **Automatic Discounts** (Discount Function) would be needed instead of Cart Transform for the pricing.
@@ -1298,6 +1300,7 @@ product-group-bundler/
 
 | Constraint | Impact |
 |------------|--------|
+| **Nested Cart Line Limitations** | Cannot nest under existing product bundles/components. Only 1 level of nesting allowed. Not compatible with Draft Orders API, POS, or Script Editor. |
 | **One Cart Transform per store** | If another app already uses Cart Transform, there will be a conflict. |
 | **Selling plans incompatible** | Cart Transform operations are rejected for subscription items. |
 | **Metafield size limit** | ~256 KB per metafield. Sufficient for hundreds of bundle products. |
@@ -1323,11 +1326,11 @@ product-group-bundler/
 |---|------|-----------|-----------------|
 | 1.1 | Clean up scaffolded code: remove demo route content, demo metafield/metaobject from TOML | App | 1h |
 | 1.2 | Update `shopify.app.toml`: scopes, metafield definition | App | 30min |
-| 1.3 | Generate admin block extension scaffold | Admin Block | 30min |
-| 1.4 | Build admin block: load metafield, add/remove groups, add/remove products, set discount, save | Admin Block | 8h |
-| 1.5 | Add locales (EN + FR) for admin block | Admin Block | 1h |
+| 1.3 | Generate product configuration extension scaffold | Product Config | 30min |
+| 1.4 | Build product config: load metafield, add/remove groups, add/remove products, set discount, save | Product Config | 8h |
+| 1.5 | Add locales (EN + FR) for product config extension | Product Config | 1h |
 | 1.6 | Generate cart transform function scaffold | Cart Transform | 30min |
-| 1.7 | Write input query + function logic | Cart Transform | 4h |
+| 1.7 | Write input query + function logic, register `cartTransformCreate` | Cart Transform / App | 4h |
 | 1.8 | Generate theme app extension scaffold | Theme Block | 30min |
 | 1.9 | Build Liquid block template | Theme Block | 2h |
 | 1.10 | Build JS: parse config, fetch product data, render UI, handle selection, intercept add-to-cart | Theme Block | 8h |
@@ -1342,13 +1345,13 @@ product-group-bundler/
 
 | # | Task | Extension |
 |---|------|-----------|
-| 2.1 | Variant restriction support in admin block (select specific variants) | Admin Block |
+| 2.1 | Variant restriction support in config extension (select specific variants) | Product Config |
 | 2.2 | Variant selector UI on storefront block | Theme Block |
-| 2.3 | Group reordering (drag-and-drop or arrows) in admin block | Admin Block |
+| 2.3 | Group reordering (drag-and-drop or arrows) in config extension | Product Config |
 | 2.4 | Product availability checks (out-of-stock, draft) in theme block | Theme Block |
 | 2.5 | Cart display enhancements: "bundle" badge, visual grouping of bundled items | Theme |
-| 2.6 | Product handle auto-resolution in admin block (fetch handle when adding product) | Admin Block |
-| 2.7 | Loading skeletons in admin block and theme block | Both |
+| 2.6 | Product handle auto-resolution in config extension (fetch handle when adding product) | Product Config |
+| 2.7 | Loading skeletons in config extension and theme block | Both |
 | 2.8 | Error handling and edge case coverage | All |
 
 ### Phase 3 — Advanced Features (Future)
@@ -1370,8 +1373,8 @@ product-group-bundler/
 
 ### Manual Testing Checklist
 
-**Admin Block:**
-- [ ] Block appears on product detail page in Admin
+**Product Config Extension:**
+- [ ] Extension appears on product detail page under "Bundled products" card in Admin
 - [ ] Can create a new group with EN + FR names
 - [ ] Can add a product to a group via picker
 - [ ] Cannot add the current product to its own group
@@ -1392,15 +1395,15 @@ product-group-bundler/
 - [ ] Variant dropdown appears for multi-variant products
 - [ ] Locale switches correctly (EN/FR)
 - [ ] Clicking "Add to Cart" adds main product + selected bundle products
-- [ ] Line properties `_bundle_parent_id` and `_bundle_group_id` are set correctly
+- [ ] Nested properties set correctly: `parent_id` links the items, `_bundle_parent_product_id` and `_bundle_group_id` are set
 - [ ] `pgb:added-to-cart` event fires
 
 **Cart Transform:**
 - [ ] Bundled items show discounted price in cart
 - [ ] Fixed amount discount calculates correctly
 - [ ] Percentage discount calculates correctly
-- [ ] Removing parent product from cart: bundled items lose discount
-- [ ] Adding a product with fake `_bundle_parent_id`: no discount applied
+- [ ] Removing parent product from cart: bundled items automatically removed by Shopify
+- [ ] Adding a product with fake `_bundle_parent_product_id`: no discount applied
 - [ ] Products not in the metafield config: no discount applied
 - [ ] Discount does not exceed product price (floors at $0)
 - [ ] Function handles empty/missing metafield gracefully
@@ -1417,7 +1420,7 @@ product-group-bundler/
 | Test Type | Tool | Coverage |
 |-----------|------|----------|
 | Cart Transform unit tests | Vitest / Jest | Function logic with mock inputs |
-| Admin block component tests | `@shopify/ui-extensions-test-utils` | Component rendering and interactions |
+| Config extension component tests | `@shopify/ui-extensions-test-utils` | Component rendering and interactions |
 | Theme block JS tests | Vitest | Selection logic, payload building |
 | E2E tests | (Future) Playwright | Full add-to-cart flow on dev store |
 
