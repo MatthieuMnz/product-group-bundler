@@ -1,6 +1,11 @@
 {%- assign namespace = 'app--' | append: app.id -%}
 {%- assign bundle_meta = product.metafields[namespace].bundle_groups -%}
-{%- if bundle_meta != blank -%}
+{%- if bundle_meta == blank -%}
+  {%- comment -%}Fallback for when app.id evaluates to empty in Theme Block testing contexts{%- endcomment -%}
+  {%- assign bundle_meta = product.metafields['app--329858121729'].bundle_groups -%}
+{%- endif -%}
+
+{%- if bundle_meta.value != blank -%}
   {%- assign bundle_data = bundle_meta.value -%}
 
   <div
