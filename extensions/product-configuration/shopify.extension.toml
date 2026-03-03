@@ -1,13 +1,18 @@
-api_version = "2026-04"
-type = "ui_extension"
+api_version = "2025-07"
 
 [[extensions]]
+uid = "b8c0d62f-45ed-9d6f-7bb4-b3c1e49f70ca609666cc"
+type = "ui_extension"
 name = "Bundle Groups"
 handle = "bundle-group-manager"
 description = "Configure product bundle groups with discounts"
 
   [[extensions.targeting]]
   target = "admin.product-details.configuration.render"
+  module = "./src/BlockExtension.tsx"
+
+  [[extensions.targeting]]
+  target = "admin.product-variant-details.configuration.render"
   module = "./src/BlockExtension.tsx"
 
 [extensions.capabilities]

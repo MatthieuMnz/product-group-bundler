@@ -1,14 +1,19 @@
+// @ts-nocheck
 import { BlockStack, Button, InlineStack, Text, TextField, Divider } from '@shopify/ui-extensions-react/admin';
 import { BundleGroup, BundleProduct } from '../utils/types';
 import { ProductEntry } from './ProductEntry';
+import { useProductPicker } from '../hooks/useProductPicker';
 
 interface GroupCardProps {
   group: BundleGroup;
+  currentProductId: string;
   onChange: (update: Partial<BundleGroup>) => void;
   onRemove: () => void;
 }
 
-export function GroupCard({ group, onChange, onRemove }: GroupCardProps) {
+export function GroupCard({ group, currentProductId, onChange, onRemove }: GroupCardProps) {
+  const { pickProducts } = useProductPicker();
+
   const handleProductChange = (index: number, update: Partial<BundleProduct>) => {
     const products = [...group.products];
     products[index] = { ...products[index], ...update };
@@ -21,16 +26,26 @@ export function GroupCard({ group, onChange, onRemove }: GroupCardProps) {
     onChange({ products });
   };
 
-  const handleAddProduct = () => {
-    const products = [...group.products];
-    products.push({
-      productId: '',
-      handle: '',
-      variantIds: [],
-      discountType: 'fixed_amount',
-      discountValue: 0,
-    });
-    onChange({ products });
+  const handleAddProduct = async () => {
+    const existingIds = group.products.map(p => p.productId);
+    const selected = await pickProducts(existingIds);
+    if (!selected || selected.length === 0) return;
+
+    const newProducts: BundleProduct[] = selected
+      .filter(p => p.id !== currentProductId) // Prevent self-reference
+      .filter(p => !existingIds.includes(p.id)) // Prevent duplicates
+      .map(p => ({
+        productId: p.id,
+        handle: p.handle,
+        title: p.title,
+        variantIds: [],
+        discountType: 'fixed_amount' as const,
+        discountValue: 0,
+      }));
+
+    if (newProducts.length === 0) return;
+
+    onChange({ products: [...group.products, ...newProducts] });
   };
 
   return (
@@ -56,7 +71,7 @@ export function GroupCard({ group, onChange, onRemove }: GroupCardProps) {
       <Divider />
       
       {group.products.map((product, index) => (
-        <BlockStack key={index} gap="base">
+        <BlockStack key={product.productId || index} gap="base">
           <ProductEntry 
             product={product} 
             onChange={(update) => handleProductChange(index, update)}

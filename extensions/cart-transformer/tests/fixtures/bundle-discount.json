@@ -1,0 +1,110 @@
+{
+    "payload": {
+        "export": "run",
+        "target": "purchase.cart-transform.run",
+        "input": {
+            "cart": {
+                "lines": [
+                    {
+                        "id": "gid://shopify/CartLine/parent-1",
+                        "quantity": 1,
+                        "cost": {
+                            "amountPerQuantity": {
+                                "amount": "100.00",
+                                "currencyCode": "CAD"
+                            }
+                        },
+                        "merchandise": {
+                            "__typename": "ProductVariant",
+                            "id": "gid://shopify/ProductVariant/100",
+                            "product": {
+                                "id": "gid://shopify/Product/10",
+                                "bundleGroups": {
+                                    "value": "{\"version\":1,\"groups\":[{\"id\":\"group-1\",\"name\":{\"en\":\"Accessories\",\"fr\":\"Accessoires\"},\"sortOrder\":0,\"products\":[{\"productId\":\"gid://shopify/Product/20\",\"handle\":\"product-b\",\"variantIds\":[],\"discountType\":\"fixed_amount\",\"discountValue\":10},{\"productId\":\"gid://shopify/Product/30\",\"handle\":\"product-c\",\"variantIds\":[],\"discountType\":\"percentage\",\"discountValue\":15}]}]}"
+                                }
+                            }
+                        },
+                        "bundleParentProductId": null,
+                        "bundleGroupId": null
+                    },
+                    {
+                        "id": "gid://shopify/CartLine/child-1",
+                        "quantity": 1,
+                        "cost": {
+                            "amountPerQuantity": {
+                                "amount": "50.00",
+                                "currencyCode": "CAD"
+                            }
+                        },
+                        "merchandise": {
+                            "__typename": "ProductVariant",
+                            "id": "gid://shopify/ProductVariant/200",
+                            "product": {
+                                "id": "gid://shopify/Product/20",
+                                "bundleGroups": null
+                            }
+                        },
+                        "bundleParentProductId": {
+                            "value": "gid://shopify/Product/10"
+                        },
+                        "bundleGroupId": {
+                            "value": "group-1"
+                        }
+                    },
+                    {
+                        "id": "gid://shopify/CartLine/child-2",
+                        "quantity": 1,
+                        "cost": {
+                            "amountPerQuantity": {
+                                "amount": "80.00",
+                                "currencyCode": "CAD"
+                            }
+                        },
+                        "merchandise": {
+                            "__typename": "ProductVariant",
+                            "id": "gid://shopify/ProductVariant/300",
+                            "product": {
+                                "id": "gid://shopify/Product/30",
+                                "bundleGroups": null
+                            }
+                        },
+                        "bundleParentProductId": {
+                            "value": "gid://shopify/Product/10"
+                        },
+                        "bundleGroupId": {
+                            "value": "group-1"
+                        }
+                    }
+                ]
+            }
+        },
+        "expected_output": {
+            "operations": [
+                {
+                    "update": {
+                        "cartLineId": "gid://shopify/CartLine/child-1",
+                        "price": {
+                            "adjustment": {
+                                "fixedPricePerUnit": {
+                                    "amount": "40.00"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "update": {
+                        "cartLineId": "gid://shopify/CartLine/child-2",
+                        "price": {
+                            "adjustment": {
+                                "fixedPricePerUnit": {
+                                    "amount": "68.00"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

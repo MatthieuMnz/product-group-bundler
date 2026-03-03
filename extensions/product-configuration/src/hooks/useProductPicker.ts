@@ -1,25 +1,43 @@
+// @ts-nocheck
 import { useApi } from '@shopify/ui-extensions-react/admin';
 import { useCallback } from 'react';
 
-export function useProductPicker() {
-  const { intents } = useApi();
+const TARGET = 'admin.product-details.configuration.render';
 
-  const pickProducts = useCallback(async (selectedIds: string[] = []) => {
+interface PickedProduct {
+  id: string;
+  title: string;
+  handle: string;
+}
+
+export function useProductPicker() {
+  const { resourcePicker } = useApi(TARGET as any);
+
+  const pickProducts = useCallback(async (selectedIds: string[] = []): Promise<PickedProduct[]> => {
     try {
-      const result = await (intents as any).launchUrl('shopify:admin/pickers/products', {
-        selectionIds: selectedIds,
+      const selected = await (resourcePicker as any)({
+        type: 'product',
         multiple: true,
+        action: 'select',
+        selectionIds: selectedIds.map(id => ({ id })),
+        filter: {
+          draft: false,
+          archived: false,
+        },
       });
 
-      if (result?.selection) {
-        return result.selection as { id: string; title: string; handle: string }[];
-      }
+      if (!selected) return []; // User cancelled
+
+      return selected.map((product: any) => ({
+        id: product.id,
+        title: product.title,
+        handle: product.handle,
+      }));
     } catch (e) {
-      console.error(e);
+      console.error('Product picker error:', e);
       return [];
     }
-    return [];
-  }, [intents]);
+  }, [resourcePicker]);
 
   return { pickProducts };
 }

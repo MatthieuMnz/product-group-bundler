@@ -26,20 +26,41 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   
   return { 
     hasCartTransform: cartTransforms.length > 0,
-    functionId: process.env.SHOPIFY_BUNDLE_DISCOUNT_ID
   };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
-  
-  const functionId = process.env.SHOPIFY_BUNDLE_DISCOUNT_ID;
-  if (!functionId) {
-    return { error: "Function ID not found in environment. Please ensure the extension is deployed or pushed." };
-  }
 
   if (formData.get("action") === "setupCartTransform") {
+    // Dynamically find the bundle-discount function ID via GraphQL
+    const fnResponse = await admin.graphql(
+      `#graphql
+      query {
+        shopifyFunctions(first: 25) {
+          nodes {
+            id
+            title
+            apiType
+            app {
+              title
+            }
+          }
+        }
+      }`
+    );
+
+    const fnParsed = await fnResponse.json();
+    const functions = fnParsed.data?.shopifyFunctions?.nodes || [];
+    const bundleFunction = functions.find(
+      (fn: any) => fn.apiType === "cart_transform"
+    );
+
+    if (!bundleFunction) {
+      return { error: "Cart Transform function not found. Please ensure the extension is built and pushed." };
+    }
+
     const response = await admin.graphql(
       `#graphql
       mutation cartTransformCreate($functionId: String!) {
@@ -56,7 +77,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }`,
       {
         variables: {
-          functionId: functionId
+          functionId: bundleFunction.id
         }
       }
     );

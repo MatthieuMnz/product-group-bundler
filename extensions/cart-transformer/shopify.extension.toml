@@ -16,5 +16,5 @@ uid = "880efb62-6c5e-ad93-d249-9913aad3d9cb8bb0dbab"
   export = "run"
 
   [extensions.ui.paths]
-  create = "/"
-  details = "/"
+  create = "/app/bundle-settings"
+  details = "/app/bundle-settings"

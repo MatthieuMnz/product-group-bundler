@@ -1,18 +1,34 @@
 {
   "payload": {
-    "export": "cart-transform-run",
-    "target": "cart.transform.run",
+    "export": "run",
+    "target": "purchase.cart-transform.run",
     "input": {
       "cart": {
         "lines": [
           {
             "id": "gid://shopify/CartLine/1",
-            "quantity": 1
+            "quantity": 1,
+            "cost": {
+              "amountPerQuantity": {
+                "amount": "50.00",
+                "currencyCode": "CAD"
+              }
+            },
+            "merchandise": {
+              "__typename": "ProductVariant",
+              "id": "gid://shopify/ProductVariant/100",
+              "product": {
+                "id": "gid://shopify/Product/10",
+                "bundleGroups": null
+              }
+            },
+            "bundleParentProductId": null,
+            "bundleGroupId": null
           }
         ]
       }
     },
-    "output": {
+    "expected_output": {
       "operations": []
     }
   }

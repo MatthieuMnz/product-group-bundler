@@ -1,4 +1,4 @@
-import { BlockStack, Button, InlineStack, Select, Text, TextField, NumberField } from '@shopify/ui-extensions-react/admin';
+import { BlockStack, Button, InlineStack, Select, Text, NumberField } from '@shopify/ui-extensions-react/admin';
 import { BundleProduct } from '../utils/types';
 
 interface ProductEntryProps {
@@ -8,13 +8,15 @@ interface ProductEntryProps {
 }
 
 export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps) {
+  const displayName = product.title || product.handle || product.productId;
+
   return (
     <BlockStack gap="base">
-      <TextField 
-        label="Product Handle (Temporary till picker enabled)"
-        value={product.handle || ''}
-        onChange={(val: string) => onChange({ handle: val, productId: `gid://shopify/Product/${val}` })}
-      />
+      <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
+        <Text fontWeight="bold">{displayName}</Text>
+        <Button onClick={onRemove} tone="critical">Remove</Button>
+      </InlineStack>
+
       <InlineStack gap="base" blockAlignment="end">
         <Select
           label="Discount Type"
@@ -31,7 +33,6 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
           onChange={(val: string | number) => onChange({ discountValue: Number(val) || 0 })}
           min={0}
         />
-        <Button onClick={onRemove} tone="critical">Remove</Button>
       </InlineStack>
     </BlockStack>
   );

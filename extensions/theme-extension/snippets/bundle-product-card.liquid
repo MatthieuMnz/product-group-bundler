@@ -1,0 +1,49 @@
+{%- comment -%}
+  Bundle Product Card Snippet
+
+  Renders a single product card within the bundle picker.
+  Used by bundle-picker.liquid as a reusable template for each bundled product.
+
+  Variables:
+    - product_title: string — The product title
+    - product_image_url: string — Product image URL
+    - original_price: string — Original price formatted
+    - discounted_price: string — Discounted price formatted
+    - discount_label: string — Discount badge text (e.g. "Save $10" or "Save 15%")
+    - product_id: string — Product GID
+    - variant_id: string — Default variant ID
+    - group_id: string — Bundle group UUID
+    - has_variants: boolean — Whether to show a variant selector
+{%- endcomment -%}
+
+<label class="pgb-product-card">
+  <input
+    type="checkbox"
+    class="pgb-checkbox"
+    data-group-id="{{ group_id }}"
+    data-product-id="{{ product_id }}"
+    data-variant-id="{{ variant_id }}"
+  >
+  <div class="pgb-product-info">
+    {%- if product_image_url != blank -%}
+      <img
+        class="pgb-product-image"
+        src="{{ product_image_url | image_url: width: 80 }}"
+        alt="{{ product_title | escape }}"
+        width="80"
+        height="80"
+        loading="lazy"
+      >
+    {%- endif -%}
+    <div class="pgb-product-details">
+      <span class="pgb-product-title">{{ product_title | escape }}</span>
+      <span class="pgb-product-price">
+        <span class="pgb-old-price">{{ original_price }}</span>
+        <span class="pgb-new-price">{{ discounted_price }}</span>
+      </span>
+      {%- if discount_label != blank -%}
+        <span class="pgb-discount-badge">{{ discount_label }}</span>
+      {%- endif -%}
+    </div>
+  </div>
+</label>

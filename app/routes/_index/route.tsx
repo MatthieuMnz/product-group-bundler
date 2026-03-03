@@ -21,9 +21,9 @@ export default function App() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>Product Group Bundler</h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          Create flexible product bundles with group-based discounts, directly on your product pages.
         </p>
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">
@@ -39,16 +39,16 @@ export default function App() {
         )}
         <ul className={styles.list}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Bundle groups</strong>. Configure groups of related products
+            (accessories, tools, etc.) with per-product discounts.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Storefront picker</strong>. Customers see a slick bundle
+            picker on product pages and add extras to their cart.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Automatic discounts</strong>. Cart Transform applies
+            discounts server-side — no coupon codes needed.
           </li>
         </ul>
       </div>

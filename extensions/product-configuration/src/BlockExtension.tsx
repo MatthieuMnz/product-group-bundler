@@ -100,6 +100,7 @@ function App() {
               <GroupCard
                 key={group.id}
                 group={group}
+                currentProductId={productId}
                 onChange={(update) => handleGroupChange(index, update)}
                 onRemove={() => handleGroupRemove(index)}
               />
