@@ -20,19 +20,18 @@ const TARGET = 'admin.product-details.block.render';
 export default reactExtension(TARGET, () => <App />);
 
 function App() {
-  const { data } = useApi(TARGET as any);
-  // data contains product ID and selectedVariantId (if target has it)
-  // For product-details target, data.selected[0].id format is 'gid://shopify/Product/123'
+  const { data, i18n } = useApi(TARGET as any);
   const productId = (data as any)?.selected?.[0]?.id || "gid://shopify/Product/0";
 
   const { config, isLoading, saveConfig, setConfig } = useBundleConfig(productId);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
-      <AdminBlock title="Bundle Groups">
-        <Text>Loading config...</Text>
+      <AdminBlock title={i18n.translate('blockTitle')}>
+        <Text>{i18n.translate('saving')}</Text>
       </AdminBlock>
     );
   }
@@ -50,7 +49,7 @@ function App() {
     try {
       await saveConfig(config);
     } catch (e: any) {
-      setErrors([e.message || "Failed to save"]);
+      setErrors([e.message || i18n.translate('error')]);
     } finally {
       setIsSaving(false);
     }
@@ -58,13 +57,15 @@ function App() {
 
   const handleAddGroup = () => {
     if (!config) return;
+    const newId = generateId();
     const newGroup: BundleGroup = {
-      id: generateId(),
+      id: newId,
       name: '',
       sortOrder: config.groups.length,
       products: [],
     };
     setConfig({ ...config, groups: [...config.groups, newGroup] });
+    setExpandedGroupId(newId);
   };
 
   const handleGroupChange = (index: number, update: Partial<BundleGroup>) => {
@@ -76,13 +77,21 @@ function App() {
 
   const handleGroupRemove = (index: number) => {
     if (!config) return;
+    const removedId = config.groups[index].id;
     const newGroups = [...config.groups];
     newGroups.splice(index, 1);
     setConfig({ ...config, groups: newGroups });
+    if (expandedGroupId === removedId) {
+      setExpandedGroupId(null);
+    }
+  };
+
+  const handleToggleGroup = (groupId: string) => {
+    setExpandedGroupId((prev) => (prev === groupId ? null : groupId));
   };
 
   return (
-    <AdminBlock title="Bundle Groups">
+    <AdminBlock title={i18n.translate('blockTitle')}>
       <BlockStack gap="base">
         {errors.length > 0 && (
           <BlockStack gap="base">
@@ -95,21 +104,23 @@ function App() {
         {config?.groups.length === 0 ? (
           <EmptyState onAdd={handleAddGroup} />
         ) : (
-          <BlockStack gap="large">
+          <BlockStack gap="base">
             {config?.groups.map((group, index) => (
               <GroupCard
                 key={group.id}
                 group={group}
                 currentProductId={productId}
+                isExpanded={expandedGroupId === group.id}
+                onToggle={() => handleToggleGroup(group.id)}
                 onChange={(update) => handleGroupChange(index, update)}
                 onRemove={() => handleGroupRemove(index)}
               />
             ))}
 
             <InlineStack blockAlignment="center" inlineAlignment="space-between">
-              <Button onClick={handleAddGroup}>Add Another Group</Button>
+              <Button onClick={handleAddGroup}>{i18n.translate('addGroup')}</Button>
               <Button variant="primary" loading={isSaving} onClick={handleSave}>
-                Save Changes
+                {i18n.translate('save')}
               </Button>
             </InlineStack>
           </BlockStack>

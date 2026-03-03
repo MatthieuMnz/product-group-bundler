@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const mainProductId = container.getAttribute('data-product-gid');
         const locale = container.getAttribute('data-locale') || 'en';
         const currencySymbol = container.getAttribute('data-currency-symbol') || '$';
+        const customHeading = container.getAttribute('data-heading') || 'Bundle';
 
         // State to hold selected products
         const state = {
@@ -17,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Render Logic
-        container.innerHTML = '<h4>Loading bundles...</h4>';
+        container.innerHTML = `<h4>${customHeading}</h4>`;
 
         // Fetch product details via AJAX
         const productData = {};
@@ -32,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        renderGroups(container, config, productData, locale, currencySymbol, state);
+        renderGroups(container, config, productData, locale, currencySymbol, state, customHeading);
 
         // Intercept Add to Cart
         interceptAddToCart(mainProductId, state);
@@ -43,8 +44,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-function renderGroups(container, config, productData, locale, currencySymbol, state) {
-    let html = '<div class="pgb-groups-wrapper">';
+function renderGroups(container, config, productData, locale, currencySymbol, state, customHeading) {
+    let html = `<div class="pgb-groups-wrapper">`;
 
     config.groups.forEach((group, index) => {
         // Basic title

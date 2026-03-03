@@ -1,4 +1,4 @@
-import { BlockStack, Button, InlineStack, Select, Text, NumberField } from '@shopify/ui-extensions-react/admin';
+import { BlockStack, Button, InlineStack, Select, Text, NumberField, useApi } from '@shopify/ui-extensions-react/admin';
 import { BundleProduct } from '../utils/types';
 
 interface ProductEntryProps {
@@ -8,27 +8,28 @@ interface ProductEntryProps {
 }
 
 export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps) {
+  const { i18n } = useApi();
   const displayName = product.title || product.handle || product.productId;
 
   return (
-    <BlockStack gap="base">
+    <BlockStack gap="small">
       <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
         <Text fontWeight="bold">{displayName}</Text>
-        <Button onClick={onRemove} tone="critical">Remove</Button>
+        <Button onClick={onRemove} tone="critical">✕</Button>
       </InlineStack>
 
       <InlineStack gap="base" blockAlignment="end">
         <Select
-          label="Discount Type"
+          label={i18n.translate('discountType')}
           value={product.discountType}
           options={[
-            { label: 'Amount off ($)', value: 'fixed_amount' },
-            { label: 'Percentage off (%)', value: 'percentage' }
+            { label: i18n.translate('discountFixed'), value: 'fixed_amount' },
+            { label: i18n.translate('discountPercentage'), value: 'percentage' }
           ]}
           onChange={(val: string) => onChange({ discountType: val as any })}
         />
         <NumberField
-          label="Discount Value"
+          label={i18n.translate('discountValue')}
           value={product.discountValue}
           onChange={(val: string | number) => onChange({ discountValue: Number(val) || 0 })}
           min={0}

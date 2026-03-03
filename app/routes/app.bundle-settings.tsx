@@ -59,7 +59,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
 
     if (!bundleFunction) {
-      return { error: "Cart Transform function not found. Please ensure the extension is built and pushed." };
+      return { error: "Fonction Cart Transform introuvable. Veuillez vous assurer que l'extension est compilée et déployée." };
     }
 
     const response = await admin.graphql(
@@ -84,13 +84,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: parsed.data.cartTransformCreate.userErrors[0].message };
     }
 
-    return { success: true, message: "Cart Transform activated!" };
+    return { success: true, message: "Cart Transform activé !" };
   }
 
   if (actionType === "deactivate") {
     const cartTransformId = formData.get("cartTransformId");
     if (!cartTransformId) {
-      return { error: "No Cart Transform ID provided." };
+      return { error: "Aucun identifiant Cart Transform fourni." };
     }
 
     const response = await admin.graphql(
@@ -112,7 +112,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: parsed.data.cartTransformDelete.userErrors[0].message };
     }
 
-    return { success: true, message: "Cart Transform deactivated." };
+    return { success: true, message: "Cart Transform désactivé." };
   }
 
   return null;
@@ -125,28 +125,28 @@ export default function BundleSettings() {
 
   useEffect(() => {
     if (fetcher.data?.success) {
-      shopify.toast.show(fetcher.data.message || "Done!");
+      shopify.toast.show(fetcher.data.message || "Terminé !");
     } else if (fetcher.data?.error) {
       shopify.toast.show(fetcher.data.error, { isError: true });
     }
   }, [fetcher.data, shopify]);
 
   return (
-    <s-page heading="Bundle Discount Settings">
-      <s-section heading="Cart Transform Function">
+    <s-page heading="Paramètres des remises de lots">
+      <s-section heading="Fonction Cart Transform">
         <s-paragraph>
           <s-text>
-            The Cart Transform function applies bundle discounts automatically when customers add bundled products to their cart. It reads the discount configuration from the product metafield and adjusts prices at checkout.
+            La fonction Cart Transform applique automatiquement les remises de lots lorsque les clients ajoutent des produits groupés à leur panier. Elle lit la configuration de remise depuis le métachamp du produit et ajuste les prix au passage en caisse.
           </s-text>
         </s-paragraph>
 
         {hasCartTransform ? (
           <s-box>
-            <s-text>✅ Cart Transform is active. Bundle discounts are being applied.</s-text>
+            <s-text>✅ Cart Transform est actif. Les remises de lots sont appliquées.</s-text>
             <br />
             {cartTransforms.map((ct: any) => (
               <s-box key={ct.id}>
-                <s-text>ID: {ct.id}</s-text>
+                <s-text>ID : {ct.id}</s-text>
                 <br />
                 <s-button
                   tone="critical"
@@ -158,14 +158,14 @@ export default function BundleSettings() {
                   }
                   loading={fetcher.state !== "idle"}
                 >
-                  Deactivate
+                  Désactiver
                 </s-button>
               </s-box>
             ))}
           </s-box>
         ) : (
           <s-box>
-            <s-text>⚠️ Cart Transform is not active. Bundle discounts will not be applied.</s-text>
+            <s-text>⚠️ Cart Transform n'est pas actif. Les remises de lots ne seront pas appliquées.</s-text>
             <br />
             <s-button
               variant="primary"
@@ -174,18 +174,18 @@ export default function BundleSettings() {
               }
               loading={fetcher.state !== "idle"}
             >
-              Activate Bundle Discounts
+              Activer les remises de lots
             </s-button>
           </s-box>
         )}
       </s-section>
 
-      <s-section heading="How It Works">
+      <s-section heading="Comment ça fonctionne">
         <s-unordered-list>
-          <s-list-item>When a customer adds a bundled product to their cart, the Cart Transform function runs automatically.</s-list-item>
-          <s-list-item>It reads the bundle configuration from the parent product's metafield.</s-list-item>
-          <s-list-item>It validates the bundle relationship and applies the configured discount.</s-list-item>
-          <s-list-item>The discounted price is shown in the cart and checkout.</s-list-item>
+          <s-list-item>Lorsqu'un client ajoute un produit groupé à son panier, la fonction Cart Transform s'exécute automatiquement.</s-list-item>
+          <s-list-item>Elle lit la configuration du lot depuis le métachamp du produit parent.</s-list-item>
+          <s-list-item>Elle valide la relation de lot et applique la remise configurée.</s-list-item>
+          <s-list-item>Le prix remisé est affiché dans le panier et au passage en caisse.</s-list-item>
         </s-unordered-list>
       </s-section>
     </s-page>

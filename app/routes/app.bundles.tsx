@@ -5,7 +5,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 
 interface BundleGroup {
   id: string;
-  name: { en: string; fr: string };
+  name: string;
   products: { productId: string }[];
 }
 
@@ -26,12 +26,24 @@ interface ProductWithBundles {
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
 
+  const appRes = await admin.graphql(`
+    query {
+      app {
+        id
+      }
+    }
+  `);
+  const appParsed = await appRes.json();
+  const appIdGid = appParsed.data?.app?.id;
+  const numericId = appIdGid ? appIdGid.split('/').pop() : '';
+  const namespace = numericId ? `app--${numericId}` : "app--product-group-bundler";
+
   const response = await admin.graphql(
     `#graphql
-    query ProductsWithBundles {
+    query ProductsWithBundles($namespace: String!, $query: String!) {
       products(
         first: 50,
-        query: "metafields.app--product-group-bundler.bundle_groups:*"
+        query: $query
       ) {
         edges {
           node {
@@ -41,7 +53,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             featuredImage {
               url(transform: { maxWidth: 100 })
             }
-            metafield(namespace: "app--product-group-bundler", key: "bundle_groups") {
+            metafield(namespace: $namespace, key: "bundle_groups") {
               value
             }
           }
@@ -51,7 +63,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           endCursor
         }
       }
-    }`
+    }`,
+    {
+      variables: {
+        namespace,
+        query: `metafields.${namespace}.bundle_groups:*`
+      }
+    }
   );
 
   const parsed = await response.json();
@@ -89,19 +107,19 @@ export default function Bundles() {
   const { products } = useLoaderData<typeof loader>();
 
   return (
-    <s-page heading="Products with Bundles">
+    <s-page heading="Produits avec des lots">
       <s-section>
         {products.length === 0 ? (
           <s-box>
-            <s-text>No products have bundle groups configured yet.</s-text>
+            <s-text>Aucun produit n'a de groupe de lots configuré pour le moment.</s-text>
             <br />
             <s-text>
-              To get started, go to a product in Shopify Admin and configure bundle groups in the "Bundle Groups" configuration card.
+              Pour commencer, allez sur un produit dans l'Admin Shopify et configurez les groupes de lots dans la fiche de configuration « Groupes de lots ».
             </s-text>
           </s-box>
         ) : (
           <s-box>
-            <s-text>{products.length} product{products.length !== 1 ? 's' : ''} with bundle groups</s-text>
+            <s-text>{products.length} produit{products.length !== 1 ? 's' : ''} avec des groupes de lots</s-text>
             <br />
             <s-box padding-block-start="base">
               {products.map((product: ProductWithBundles) => (
@@ -109,7 +127,7 @@ export default function Bundles() {
                   <s-box padding="base">
                     <s-text><b>{product.title}</b></s-text>
                     <s-text tone="neutral">
-                      {product.groupCount} group{product.groupCount !== 1 ? 's' : ''} · {product.totalProducts} bundled product{product.totalProducts !== 1 ? 's' : ''}
+                      {product.groupCount} groupe{product.groupCount !== 1 ? 's' : ''} · {product.totalProducts} produit{product.totalProducts !== 1 ? 's' : ''} associé{product.totalProducts !== 1 ? 's' : ''}
                     </s-text>
                   </s-box>
                 </s-box>

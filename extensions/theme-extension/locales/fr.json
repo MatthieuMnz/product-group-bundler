@@ -7,6 +7,7 @@
     "discountBadgePercent": "Économisez {{ percent }} %",
     "selectVariant": "Sélectionnez une option",
     "selected": "Sélectionné",
-    "outOfStock": "Rupture de stock"
+    "outOfStock": "Rupture de stock",
+    "noscript": "Veuillez activer JavaScript pour voir les offres de lots."
   }
 }

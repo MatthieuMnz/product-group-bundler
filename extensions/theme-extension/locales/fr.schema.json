@@ -1,0 +1,13 @@
+{
+  "bundle": {
+    "name": "Sélecteur de lot",
+    "heading": "Ajoutez des extras",
+    "layout": {
+      "label": "Mise en page",
+      "options": {
+        "list": "Liste",
+        "grid": "Grille"
+      }
+    }
+  }
+}

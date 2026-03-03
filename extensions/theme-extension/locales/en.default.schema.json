@@ -1,0 +1,13 @@
+{
+  "bundle": {
+    "name": "Bundle Picker",
+    "heading": "Add extras",
+    "layout": {
+      "label": "Layout",
+      "options": {
+        "list": "List",
+        "grid": "Grid"
+      }
+    }
+  }
+}

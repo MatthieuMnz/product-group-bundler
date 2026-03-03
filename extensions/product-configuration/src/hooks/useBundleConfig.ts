@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApi } from '@shopify/ui-extensions-react/admin';
 import { BundleConfig } from '../utils/types';
 
@@ -6,19 +6,46 @@ export function useBundleConfig(productId: string) {
   const { query } = useApi();
   const [config, setConfig] = useState<BundleConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const appNamespaceRef = useRef<string | null>(null);
+
+  const getNamespace = async () => {
+    if (appNamespaceRef.current) return appNamespaceRef.current;
+    
+    // Fetch the app ID to construct the proper namespace (app--APP_ID)
+    const appRes = await query<any>(`
+      query {
+        app {
+          id
+        }
+      }
+    `);
+    
+    const appIdGid = appRes.data?.app?.id;
+    if (appIdGid) {
+      // Extract the numerical ID from gid://shopify/App/123456
+      const numericId = appIdGid.split('/').pop();
+      appNamespaceRef.current = `app--${numericId}`;
+    } else {
+      // Fallback
+      appNamespaceRef.current = "app--product-group-bundler"; 
+    }
+    
+    return appNamespaceRef.current;
+  };
 
   const fetchConfig = useCallback(async () => {
     try {
       setIsLoading(true);
+      const namespace = await getNamespace();
       const res = await query<any>(`
-        query GetBundleGroups($productId: ID!) {
+        query GetBundleGroups($productId: ID!, $namespace: String!) {
           product(id: $productId) {
-            metafield(namespace: "app--product-group-bundler", key: "bundle_groups") {
+            metafield(namespace: $namespace, key: "bundle_groups") {
               id
               value
             }
           }
-        }`, { variables: { productId } });
+        }`, { variables: { productId, namespace } });
         
       if (res.data?.product?.metafield?.value) {
         setConfig(JSON.parse(res.data.product.metafield.value));
@@ -39,6 +66,7 @@ export function useBundleConfig(productId: string) {
 
   const saveConfig = async (newConfig: BundleConfig) => {
     try {
+      const namespace = await getNamespace();
       const res = await query<any>(`
         mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
           metafieldsSet(metafields: $metafields) {
@@ -56,7 +84,7 @@ export function useBundleConfig(productId: string) {
             metafields: [
               {
                 ownerId: productId,
-                namespace: "app--product-group-bundler",
+                namespace: namespace,
                 key: "bundle_groups",
                 type: "json",
                 value: JSON.stringify(newConfig)

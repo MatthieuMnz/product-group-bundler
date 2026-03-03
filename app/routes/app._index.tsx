@@ -58,7 +58,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
 
     if (!bundleFunction) {
-      return { error: "Cart Transform function not found. Please ensure the extension is built and pushed." };
+      return { error: "Fonction Cart Transform introuvable. Veuillez vous assurer que l'extension est compilée et déployée." };
     }
 
     const response = await admin.graphql(
@@ -100,7 +100,7 @@ export default function Index() {
 
   useEffect(() => {
     if (fetcher.data?.success) {
-      shopify.toast.show("Cart Transform function installed successfully!");
+      shopify.toast.show("Fonction Cart Transform installée avec succès !");
     } else if (fetcher.data?.error) {
       shopify.toast.show(fetcher.data.error, { isError: true });
     }
@@ -112,38 +112,38 @@ export default function Index() {
 
   return (
     <s-page heading="Product Group Bundler">
-      <s-section heading="Welcome to Product Group Bundler">
+      <s-section heading="Bienvenue sur Product Group Bundler">
         <s-paragraph>
-          This app allows you to create flexible product bundles directly on your product pages.
-          Navigate to your products to start adding bundle groups.
+          Cette application vous permet de créer des lots de produits flexibles directement sur vos pages produits.
+          Naviguez vers vos produits pour commencer à configurer des groupes de lots.
         </s-paragraph>
       </s-section>
       
-      <s-section heading="App Setup">
+      <s-section heading="Configuration de l'application">
         {hasCartTransform ? (
           <s-box>
-            <s-text>✅ Cart Transform function is active. Bundle discounts will be applied automatically in the cart.</s-text>
+            <s-text>✅ La fonction Cart Transform est active. Les remises de lots seront appliquées automatiquement dans le panier.</s-text>
           </s-box>
         ) : (
           <s-box>
             <s-paragraph>
-              <s-text>⚠️ Cart Transform function is not active. Discounts will not be applied in the cart.</s-text>
+              <s-text>⚠️ La fonction Cart Transform n'est pas active. Les remises ne seront pas appliquées dans le panier.</s-text>
             </s-paragraph>
             <br />
             <s-button 
               onClick={handleSetup} 
               loading={fetcher.state !== "idle"}
             >
-              Activate Bundle Discounts
+              Activer les remises de lots
             </s-button>
           </s-box>
         )}
       </s-section>
       
-      <s-section heading="Next Steps">
+      <s-section heading="Prochaines étapes">
         <s-unordered-list>
-          <s-list-item>Add the "Bundle Picker" app block to your default Product template in the Theme Editor.</s-list-item>
-          <s-list-item>Go to a Product in your Shopify Admin and find the "Bundle Groups" block to configure discounts.</s-list-item>
+          <s-list-item>Ajoutez le bloc « Bundle Picker » à votre modèle Produit par défaut dans l'éditeur de thème.</s-list-item>
+          <s-list-item>Allez sur un Produit dans votre Admin Shopify et trouvez le bloc « Groupes de lots » pour configurer les remises.</s-list-item>
         </s-unordered-list>
       </s-section>
     </s-page>

@@ -25,5 +25,8 @@
   "selfReference": "Cannot add the current product to its own bundle group",
   "groupRemoved": "Group removed successfully",
   "productRemoved": "Product removed successfully",
-  "configSaved": "Configuration saved successfully"
+  "configSaved": "Configuration saved successfully",
+  "product": "product",
+  "products": "products",
+  "unnamedGroup": "Unnamed group"
 }

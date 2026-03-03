@@ -10,19 +10,19 @@ export function validateConfig(config: BundleConfig, currentProductId: string): 
   const errors: string[] = [];
 
   config.groups.forEach((group, groupIndex) => {
-    if (!group.name.en || !group.name.fr) {
-      errors.push(`Group ${groupIndex + 1} must have an English and French name.`);
+    if (!group.name || group.name.trim() === '') {
+      errors.push(`Le groupe ${groupIndex + 1} doit avoir un nom.`);
     }
 
     group.products.forEach((product) => {
       if (product.productId === currentProductId) {
-        errors.push(`Cannot add the current product to its own bundle group (${group.name.en}).`);
+        errors.push(`Impossible d'ajouter le produit actuel à son propre groupe de lots (${group.name}).`);
       }
       if (product.discountValue < 0) {
-        errors.push(`Discount value must be zero or positive.`);
+        errors.push(`La valeur de la remise doit être supérieure ou égale à zéro.`);
       }
       if (product.discountType === 'percentage' && product.discountValue > 100) {
-        errors.push(`Percentage discount cannot exceed 100%.`);
+        errors.push(`La remise en pourcentage ne peut pas dépasser 100 %.`);
       }
     });
 
@@ -30,7 +30,7 @@ export function validateConfig(config: BundleConfig, currentProductId: string): 
     const productIds = group.products.map(p => p.productId);
     const uniqueIds = new Set(productIds);
     if (uniqueIds.size !== productIds.length) {
-      errors.push(`Duplicate products found in group: ${group.name.en}`);
+      errors.push(`Produits en double trouvés dans le groupe : ${group.name}`);
     }
   });
 

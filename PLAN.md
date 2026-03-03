@@ -150,7 +150,7 @@ All bundle configuration lives in a **single JSON metafield on each product** â€
 
 | Property | Value |
 |----------|-------|
-| **Namespace** | `app` (resolves to `app--product-group-bundler`) |
+| **Namespace** | `app` (resolves to `app--{APP_ID}`) |
 | **Key** | `bundle_groups` |
 | **Type** | `json` |
 | **Owner** | The app |
@@ -486,7 +486,7 @@ Variables:
 }
 ```
 
-> **Note on namespace:** When using `admin.graphql()` from a UI extension, the app's reserved namespace is `app--product-group-bundler`. In Shopify Functions, use `$app:bundle_groups`. In Liquid (theme app extension context), use `product.metafields.app--product-group-bundler.bundle_groups`.
+> **Note on namespace:** When using `admin.graphql()` from a UI extension, the app's reserved namespace is `app--{APP_ID}`. You must dynamically fetch the app ID via `app { id }` to construct it. In Shopify Functions, use `$app:bundle_groups`. In Liquid (theme app extension context), use `product.metafields['app--' | append: app.id].bundle_groups`.
 
 #### UI Layout (Admin Block)
 
@@ -594,7 +594,8 @@ Registered as an **app block** for the product page. Merchants drag it into the 
 ```liquid
 {%- comment -%} blocks/bundle-picker.liquid {%- endcomment -%}
 
-{%- assign bundle_meta = product.metafields['app--product-group-bundler']['bundle_groups'] -%}
+{%- assign namespace = 'app--' | append: app.id -%}
+{%- assign bundle_meta = product.metafields[namespace].bundle_groups -%}
 {%- if bundle_meta != blank -%}
   {%- assign bundle_data = bundle_meta.value -%}
   
@@ -1508,11 +1509,11 @@ The app-owned metafield uses different namespace formats depending on the contex
 
 | Context | Namespace | Example |
 |---------|-----------|---------|
-| **Admin API** (GraphQL) | `app--product-group-bundler` | `metafield(namespace: "app--product-group-bundler", key: "bundle_groups")` |
+| **Admin API** (GraphQL) | `app--{APP_ID}` | `metafield(namespace: "app--{APP_ID}", key: "bundle_groups")` |
 | **Shopify Functions** (input query) | `$app:bundle_groups` | `metafield(namespace: "$app:bundle_groups", key: "bundle_groups")` |
-| **Liquid** (theme) | `app--product-group-bundler` | `product.metafields['app--product-group-bundler']['bundle_groups']` |
+| **Liquid** (theme) | `app--{APP_ID}` | `product.metafields['app--' | append: app.id].bundle_groups` |
 | **TOML** (declaration) | `app.bundle_groups` | `[product.metafields.app.bundle_groups]` |
-| **REST API** | `app--product-group-bundler` | `/metafields.json?namespace=app--product-group-bundler` |
+| **REST API** | `app--{APP_ID}` | `/metafields.json?namespace=app--{APP_ID}` |
 
 > **Note:** In Shopify Functions, the `$app:` prefix allows the function to access its own app's metafields without hardcoding the full namespace. The format in the input query is `namespace: "$app:bundle_groups"` where `bundle_groups` is the **namespace suffix** after the app prefix, and the `key` parameter is the metafield key. Double-check this against the latest Shopify Functions docs at implementation time, as the syntax may vary by API version.
 

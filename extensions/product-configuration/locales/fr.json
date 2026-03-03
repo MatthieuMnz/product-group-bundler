@@ -8,7 +8,7 @@
   "removeProduct": "Retirer",
   "removeGroup": "Supprimer le groupe",
   "discountType": "Type de remise",
-  "discountFixed": "Montant fixe ($)",
+  "discountFixed": "Montant fixe (€)",
   "discountPercentage": "Pourcentage (%)",
   "discountValue": "Valeur de la remise",
   "save": "Enregistrer",
@@ -25,5 +25,8 @@
   "selfReference": "Impossible d'ajouter le produit actuel à son propre groupe",
   "groupRemoved": "Groupe supprimé avec succès",
   "productRemoved": "Produit supprimé avec succès",
-  "configSaved": "Configuration enregistrée avec succès"
+  "configSaved": "Configuration enregistrée avec succès",
+  "product": "produit",
+  "products": "produits",
+  "unnamedGroup": "Groupe sans nom"
 }
