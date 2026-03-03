@@ -15,7 +15,7 @@ import { GroupCard } from './components/GroupCard';
 import { generateId, validateConfig } from './utils/validation';
 import { BundleGroup } from './utils/types';
 
-const TARGET = 'admin.product-details.configuration.render';
+const TARGET = 'admin.product-details.block.render';
 
 export default reactExtension(TARGET, () => <App />);
 
@@ -60,7 +60,7 @@ function App() {
     if (!config) return;
     const newGroup: BundleGroup = {
       id: generateId(),
-      name: { en: '', fr: '' },
+      name: '',
       sortOrder: config.groups.length,
       products: [],
     };

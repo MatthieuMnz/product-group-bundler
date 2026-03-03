@@ -10,7 +10,7 @@ interface BundleProduct {
 
 interface BundleGroup {
   id: string;
-  name: { en: string; fr: string };
+  name: string;
   sortOrder: number;
   products: BundleProduct[];
 }

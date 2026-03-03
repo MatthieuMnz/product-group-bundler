@@ -2,7 +2,7 @@
 import { useApi } from '@shopify/ui-extensions-react/admin';
 import { useCallback } from 'react';
 
-const TARGET = 'admin.product-details.configuration.render';
+const TARGET = 'admin.product-details.block.render';
 
 interface PickedProduct {
   id: string;

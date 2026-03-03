@@ -11,7 +11,10 @@ interface GroupCardProps {
   onRemove: () => void;
 }
 
+import { useApi } from '@shopify/ui-extensions-react/admin';
+
 export function GroupCard({ group, currentProductId, onChange, onRemove }: GroupCardProps) {
+  const { i18n } = useApi();
   const { pickProducts } = useProductPicker();
 
   const handleProductChange = (index: number, update: Partial<BundleProduct>) => {
@@ -51,20 +54,15 @@ export function GroupCard({ group, currentProductId, onChange, onRemove }: Group
   return (
     <BlockStack gap="base">
       <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
-        <Text fontWeight="bold">Bundle Group: {group.name.en || "Unnamed"}</Text>
-        <Button tone="critical" onClick={onRemove}>Remove Group</Button>
+        <Text fontWeight="bold">{i18n.translate('blockTitle')}: {group.name || "Unnamed"}</Text>
+        <Button tone="critical" onClick={onRemove}>{i18n.translate('removeGroup')}</Button>
       </InlineStack>
 
       <InlineStack gap="base">
         <TextField
-          label="Name (English)"
-          value={group.name.en}
-          onChange={(val: string) => onChange({ name: { ...group.name, en: val } })}
-        />
-        <TextField
-          label="Name (French)"
-          value={group.name.fr}
-          onChange={(val: string) => onChange({ name: { ...group.name, fr: val } })}
+          label={i18n.translate('groupName')}
+          value={group.name}
+          onChange={(val: string) => onChange({ name: val })}
         />
       </InlineStack>
 

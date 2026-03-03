@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const config = JSON.parse(rawConfig);
         const mainProductId = container.getAttribute('data-product-gid');
         const locale = container.getAttribute('data-locale') || 'en';
+        const currencySymbol = container.getAttribute('data-currency-symbol') || '$';
 
         // State to hold selected products
         const state = {
@@ -31,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        renderGroups(container, config, productData, locale, state);
+        renderGroups(container, config, productData, locale, currencySymbol, state);
 
         // Intercept Add to Cart
         interceptAddToCart(mainProductId, state);
@@ -42,12 +43,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-function renderGroups(container, config, productData, locale, state) {
+function renderGroups(container, config, productData, locale, currencySymbol, state) {
     let html = '<div class="pgb-groups-wrapper">';
 
     config.groups.forEach((group, index) => {
         // Basic title
-        const title = group.name[locale] || group.name['en'] || 'Bundle Group';
+        const title = group.name || 'Bundle Group';
         html += `<div class="pgb-group" data-group-id="${group.id}">
       <h3 class="pgb-group-title">${title}</h3>
       <div class="pgb-group-items">`;
@@ -72,8 +73,8 @@ function renderGroups(container, config, productData, locale, state) {
           <div class="pgb-product-info">
             <span class="pgb-product-title">${data.title}</span>
             <span class="pgb-product-price">
-              <span class="pgb-old-price">$${origPrice}</span>
-              <span class="pgb-new-price">$${newPrice}</span>
+              <span class="pgb-old-price">${currencySymbol}${origPrice}</span>
+              <span class="pgb-new-price">${currencySymbol}${newPrice}</span>
             </span>
           </div>
         </label>

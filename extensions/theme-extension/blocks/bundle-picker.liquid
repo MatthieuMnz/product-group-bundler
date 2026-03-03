@@ -1,13 +1,14 @@
-{%- assign bundle_meta = product.metafields['app--product-group-bundler']['bundle_groups'] -%}
+{%- assign bundle_meta = product.metafields['app--product-group-bundler'].bundle_groups -%}
 {%- if bundle_meta != blank -%}
   {%- assign bundle_data = bundle_meta.value -%}
-  
+
   <div
     class="pgb-bundle-picker"
     data-product-id="{{ product.id }}"
     data-product-gid="gid://shopify/Product/{{ product.id }}"
-    data-bundle-config='{{ bundle_data | json | escape }}'
+    data-bundle-config="{{ bundle_data | json | escape }}"
     data-locale="{{ request.locale.iso_code }}"
+    data-currency-symbol="{{ cart.currency.symbol }}"
     data-layout="{{ block.settings.layout }}"
   >
     <noscript>
@@ -26,15 +27,9 @@
   "settings": [
     {
       "type": "text",
-      "id": "heading_en",
-      "label": "Heading (English)",
+      "id": "heading",
+      "label": "Heading",
       "default": "Add extras"
-    },
-    {
-      "type": "text",
-      "id": "heading_fr",
-      "label": "Heading (Français)",
-      "default": "Ajoutez des extras"
     },
     {
       "type": "select",

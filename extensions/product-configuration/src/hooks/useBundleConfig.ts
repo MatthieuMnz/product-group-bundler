@@ -40,8 +40,12 @@ export function useBundleConfig(productId: string) {
   const saveConfig = async (newConfig: BundleConfig) => {
     try {
       const res = await query<any>(`
-        mutation SaveBundleGroups($input: ProductInput!) {
-          productUpdate(input: $input) {
+        mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
+          metafieldsSet(metafields: $metafields) {
+            metafields {
+              id
+              value
+            }
             userErrors {
               field
               message
@@ -49,22 +53,20 @@ export function useBundleConfig(productId: string) {
           }
         }`, {
           variables: {
-            input: {
-              id: productId,
-              metafields: [
-                {
-                  namespace: "app--product-group-bundler",
-                  key: "bundle_groups",
-                  type: "json",
-                  value: JSON.stringify(newConfig)
-                }
-              ]
-            }
+            metafields: [
+              {
+                ownerId: productId,
+                namespace: "app--product-group-bundler",
+                key: "bundle_groups",
+                type: "json",
+                value: JSON.stringify(newConfig)
+              }
+            ]
           }
         });
       
-      if (res.data?.productUpdate?.userErrors?.length) {
-        throw new Error(res.data.productUpdate.userErrors[0].message);
+      if (res.data?.metafieldsSet?.userErrors?.length) {
+        throw new Error(res.data.metafieldsSet.userErrors[0].message);
       }
       setConfig(newConfig);
     } catch (e) {

@@ -8,11 +8,7 @@ handle = "bundle-group-manager"
 description = "Configure product bundle groups with discounts"
 
   [[extensions.targeting]]
-  target = "admin.product-details.configuration.render"
-  module = "./src/BlockExtension.tsx"
-
-  [[extensions.targeting]]
-  target = "admin.product-variant-details.configuration.render"
+  target = "admin.product-details.block.render"
   module = "./src/BlockExtension.tsx"
 
 [extensions.capabilities]
