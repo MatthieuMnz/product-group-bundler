@@ -1,4 +1,5 @@
-.pgb-bundle-picker {
+pgb-bundle-picker, .pgb-bundle-picker {
+  display: block;
   margin: 20px 0;
   padding: 15px;
   border: 1px solid #e1e3e5;

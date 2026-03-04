@@ -1,18 +1,24 @@
-async function initBundlePickers() {
-    const containers = document.querySelectorAll('.pgb-bundle-picker:not([data-initialized="true"])');
+class PgbBundlePicker extends HTMLElement {
+    constructor() {
+        super();
+    }
 
-    for (const container of containers) {
-        container.setAttribute('data-initialized', 'true');
+    connectedCallback() {
+        if (this.dataset.initialized) return;
+        this.dataset.initialized = 'true';
+        this.init();
+    }
 
-        const rawConfig = container.getAttribute('data-bundle-config');
-        if (!rawConfig) continue;
+    async init() {
+        const rawConfig = this.getAttribute('data-bundle-config');
+        if (!rawConfig) return;
 
         try {
             const config = JSON.parse(rawConfig);
-            const mainProductGid = container.getAttribute('data-product-gid');
-            const locale = container.getAttribute('data-locale') || 'en';
-            const currencySymbol = container.getAttribute('data-currency-symbol') || '$';
-            const customHeading = container.getAttribute('data-heading') || 'Bundle';
+            const mainProductGid = this.getAttribute('data-product-gid');
+            const locale = this.getAttribute('data-locale') || 'en';
+            const currencySymbol = this.getAttribute('data-currency-symbol') || '$';
+            const customHeading = this.getAttribute('data-heading') || 'Bundle';
 
             // Fetch product details via AJAX
             const productData = {};
@@ -31,38 +37,37 @@ async function initBundlePickers() {
                 }
             }
 
-            renderGroups(container, config, productData, locale, currencySymbol, customHeading, mainProductGid);
-            interceptAddToCart();
+            this.renderGroups(config, productData, locale, currencySymbol, customHeading, mainProductGid);
+            this.interceptAddToCart();
         } catch (err) {
             console.error("Bundle picker error:", err);
             // Don't overwrite the entire container or it will break statically positioned elements like labels
-            container.innerHTML = `<p style="color:red;">Error loading bundles.</p>`;
+            this.innerHTML = `<p style="color:red;">Error loading bundles.</p>`;
         }
     }
-}
 
-function renderGroups(container, config, productData, locale, currencySymbol, customHeading, mainProductGid) {
-    let html = ``;
-    if (customHeading) {
-        html += `<h4>${customHeading}</h4>`;
-    }
-    html += `<div class="pgb-groups-wrapper">`;
+    renderGroups(config, productData, locale, currencySymbol, customHeading, mainProductGid) {
+        let html = ``;
+        if (customHeading) {
+            html += `<h4>${customHeading}</h4>`;
+        }
+        html += `<div class="pgb-groups-wrapper">`;
 
-    config.groups.forEach((group) => {
-        const title = group.name || 'Bundle Group';
-        html += `<div class="pgb-group" data-group-id="${group.id}">
+        config.groups.forEach((group) => {
+            const title = group.name || 'Bundle Group';
+            html += `<div class="pgb-group" data-group-id="${group.id}">
       <h3 class="pgb-group-title">${title}</h3>
       <div class="pgb-group-items">`;
 
-        group.products.forEach(prod => {
-            const data = productData[prod.handle];
-            if (!data || !data.variants || data.variants.length === 0) return;
+            group.products.forEach(prod => {
+                const data = productData[prod.handle];
+                if (!data || !data.variants || data.variants.length === 0) return;
 
-            const firstVariant = data.variants[0];
-            const origPrice = (firstVariant.price / 100).toFixed(2);
-            const newPrice = Math.max(0, origPrice - prod.discountValue).toFixed(2);
+                const firstVariant = data.variants[0];
+                const origPrice = (firstVariant.price / 100).toFixed(2);
+                const newPrice = Math.max(0, origPrice - prod.discountValue).toFixed(2);
 
-            html += `
+                html += `
         <label class="pgb-product-card">
           <input type="checkbox" class="pgb-checkbox" 
                  data-group-id="${group.id}" 
@@ -78,24 +83,26 @@ function renderGroups(container, config, productData, locale, currencySymbol, cu
           </div>
         </label>
       `;
+            });
+
+            html += `</div></div>`;
         });
 
-        html += `</div></div>`;
-    });
+        html += '</div>';
+        this.innerHTML = html;
+    }
 
-    html += '</div>';
-    container.innerHTML = html;
-}
+    interceptAddToCart() {
+        if (window._pgbIntercepted) return;
+        window._pgbIntercepted = true;
 
-function interceptAddToCart() {
-    const forms = document.querySelectorAll('form[action*="/cart/add"]');
-    if (forms.length === 0) return;
+        window.addEventListener('submit', async (e) => {
+            const form = e.target;
+            if (!form || form.tagName !== 'FORM') return;
 
-    forms.forEach(form => {
-        if (form.dataset.pgbIntercepted === 'true') return;
-        form.dataset.pgbIntercepted = 'true';
+            const action = form.getAttribute('action') || '';
+            if (!action.includes('/cart/add')) return;
 
-        form.addEventListener('submit', async (e) => {
             const checkedBoxes = document.querySelectorAll('.pgb-checkbox:checked');
             if (checkedBoxes.length === 0) return; // No bundles selected, let it submit normally
 
@@ -106,7 +113,16 @@ function interceptAddToCart() {
             if (!mainVariantId) return;
 
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             console.log("PGB: Intercepting add to cart for bundle items...");
+
+            const submitBtn = form.querySelector('[type="submit"], button');
+            if (submitBtn) {
+                submitBtn.setAttribute('data-orig-text', submitBtn.innerHTML);
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+            }
 
             const items = [{
                 id: parseInt(mainVariantId, 10),
@@ -151,17 +167,19 @@ function interceptAddToCart() {
                     const error = await res.json();
                     console.error("PGB: Failed to add products to cart", error);
                     alert("Erreur lors de l'ajout au panier. Veuillez réessayer.");
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                    }
                 }
             } catch (err) {
                 console.error("PGB: Network error when adding bundle to cart", err);
                 form.submit();
             }
-        });
-    });
+        }, true);
+    }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initBundlePickers);
-} else {
-    initBundlePickers();
+if (!customElements.get('pgb-bundle-picker')) {
+    customElements.define('pgb-bundle-picker', PgbBundlePicker);
 }

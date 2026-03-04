@@ -16,7 +16,7 @@ query RunInput {
           product {
             id
             bundleGroups: metafield(
-              namespace: "$app:bundle_groups"
+              namespace: "$app"
               key: "bundle_groups"
             ) {
               value

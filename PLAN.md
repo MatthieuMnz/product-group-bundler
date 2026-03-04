@@ -64,7 +64,7 @@ All bundle configuration lives in a **single JSON metafield on each product** �
 │                                                                     │
 │  1. Views Product A's page                                          │
 │  2. Sees bundle groups rendered by the theme block                  │
-│  3. Checks Product B (Accessory, −$10) and Product D (Tool, −15%)  │
+│  3. Checks Product B (Accessory, −$10) and Product D (Tool, −$5)   │
 │  4. Selects variants if needed                                      │
 │  5. Clicks the existing "Add to Cart" button                        │
 │  6. Cart receives Product A and Product B + D as                    │
@@ -211,13 +211,13 @@ All bundle configuration lives in a **single JSON metafield on each product** �
                 },
                 "discountType": {
                   "type": "string",
-                  "enum": ["fixed_amount", "percentage"],
-                  "description": "Type of discount applied to this product in the bundle"
+                  "enum": ["fixed_amount"],
+                  "description": "Type of discount applied to this product in the bundle. Always fixed_amount."
                 },
                 "discountValue": {
                   "type": "number",
                   "minimum": 0,
-                  "description": "Discount value: dollar amount for fixed, 0-100 for percentage"
+                  "description": "Discount value: dollar amount to subtract from the product price"
                 }
               }
             }
@@ -249,8 +249,8 @@ All bundle configuration lives in a **single JSON metafield on each product** �
         {
           "productId": "gid://shopify/Product/1002",
           "variantIds": ["gid://shopify/ProductVariant/5001", "gid://shopify/ProductVariant/5002"],
-          "discountType": "percentage",
-          "discountValue": 15
+          "discountType": "fixed_amount",
+          "discountValue": 12.00
         }
       ]
     },
@@ -431,7 +431,7 @@ block_progress = false
 | **Remove group** | Delete a group from the config |
 | **Reorder groups** | Drag or arrow buttons to change `sortOrder` |
 | **Add product to group** | Opens Shopify's native Resource Picker (`picker.product.select`) for product selection |
-| **Configure discount** | Per product: choose `fixed_amount` or `percentage`, enter value |
+| **Configure discount** | Per product: enter a fixed dollar amount discount |
 | **Restrict variants** | Optional: select which variants of the product are allowed in the bundle |
 | **Remove product from group** | Remove a product entry from a group |
 | **Save** | Write the full JSON back to the product's metafield via `productUpdate` mutation |
@@ -498,7 +498,7 @@ Variables:
 │  ▼ Accessories / Accessoires                    [×]  │
 │  ┌────────────────────────────────────────────────┐  │
 │  │ 🔗 Product B          $10.00 off     [Edit][×] │  │
-│  │ 🔗 Product C          15% off        [Edit][×] │  │
+│  │ 🔗 Product C          $12.00 off     [Edit][×] │  │
 │  │                                                │  │
 │  │              [+ Add Product]                    │  │
 │  └────────────────────────────────────────────────┘  │
@@ -703,7 +703,7 @@ Minimal, scoped styles using a `.pgb-` prefix to avoid conflicts. The block shou
 │      Variant: [Color ▾]                          │
 │                                                  │
 │  ☐  Product C                                    │
-│      $80.00  →  $68.00 (−15%)                   │
+│      $80.00  →  $68.00 (−$12.00)                │
 │                                                  │
 ├─────────────────────────────────────────────────┤
 │  Tools / Outils                                  │
@@ -808,7 +808,7 @@ interface BundleProduct {
   productId: string;
   handle: string;
   variantIds: string[];
-  discountType: "fixed_amount" | "percentage";
+  discountType: "fixed_amount";
   discountValue: number;
 }
 
@@ -883,38 +883,22 @@ export function run(input: RunInput): FunctionRunResult {
       continue;
     }
 
-    // Calculate and apply discount
+    // Calculate and apply fixed-amount discount
     const originalPrice = parseFloat(line.cost.amountPerQuantity.amount);
+    const newPrice = Math.max(0, originalPrice - bundleProduct.discountValue);
 
-    if (bundleProduct.discountType === "percentage") {
-      operations.push({
-        update: {
-          cartLineId: line.id,
-          price: {
-            adjustment: {
-              percentageDecrease: {
-                value: bundleProduct.discountValue,
-              },
+    operations.push({
+      update: {
+        cartLineId: line.id,
+        price: {
+          adjustment: {
+            fixedPricePerUnit: {
+              amount: newPrice.toFixed(2),
             },
           },
         },
-      });
-    } else if (bundleProduct.discountType === "fixed_amount") {
-      const newPrice = Math.max(0, originalPrice - bundleProduct.discountValue);
-      operations.push({
-        update: {
-          cartLineId: line.id,
-          price: {
-            adjustment: {
-              fixedPricePerUnit: {
-                amount: newPrice.toFixed(2),
-                currencyCode: line.cost.amountPerQuantity.currencyCode,
-              },
-            },
-          },
-        },
-      });
-    }
+      },
+    });
   }
 
   return { operations };
@@ -1083,7 +1067,6 @@ All user-facing strings are translated into English (default) and French.
   "removeGroup": "Remove group",
   "discountType": "Discount type",
   "discountFixed": "Fixed amount ($)",
-  "discountPercentage": "Percentage (%)",
   "discountValue": "Discount value",
   "save": "Save",
   "saving": "Saving…",
@@ -1113,7 +1096,6 @@ All user-facing strings are translated into English (default) and French.
   "removeGroup": "Supprimer le groupe",
   "discountType": "Type de remise",
   "discountFixed": "Montant fixe ($)",
-  "discountPercentage": "Pourcentage (%)",
   "discountValue": "Valeur de la remise",
   "save": "Enregistrer",
   "saving": "Enregistrement…",
@@ -1140,7 +1122,6 @@ All user-facing strings are translated into English (default) and French.
     "originalPrice": "{{ price }}",
     "discountedPrice": "{{ price }}",
     "discountBadge": "Save {{ amount }}",
-    "discountBadgePercent": "Save {{ percent }}%",
     "selectVariant": "Select an option",
     "selected": "Selected",
     "outOfStock": "Out of stock"
@@ -1156,7 +1137,6 @@ All user-facing strings are translated into English (default) and French.
     "originalPrice": "{{ price }}",
     "discountedPrice": "{{ price }}",
     "discountBadge": "Économisez {{ amount }}",
-    "discountBadgePercent": "Économisez {{ percent }} %",
     "selectVariant": "Sélectionnez une option",
     "selected": "Sélectionné",
     "outOfStock": "Rupture de stock"
@@ -1379,7 +1359,7 @@ product-group-bundler/
 - [ ] Can create a new group with EN + FR names
 - [ ] Can add a product to a group via picker
 - [ ] Cannot add the current product to its own group
-- [ ] Can set fixed_amount and percentage discounts
+- [ ] Can set fixed_amount discounts
 - [ ] Can remove a product from a group
 - [ ] Can remove a group entirely
 - [ ] Save persists to metafield (verify via Admin API)
@@ -1402,7 +1382,7 @@ product-group-bundler/
 **Cart Transform:**
 - [ ] Bundled items show discounted price in cart
 - [ ] Fixed amount discount calculates correctly
-- [ ] Percentage discount calculates correctly
+- [ ] Fixed amount discount calculates correctly
 - [ ] Removing parent product from cart: bundled items automatically removed by Shopify
 - [ ] Adding a product with fake `_bundle_parent_product_id`: no discount applied
 - [ ] Products not in the metafield config: no discount applied

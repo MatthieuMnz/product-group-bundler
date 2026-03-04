@@ -8,7 +8,7 @@
 {%- if bundle_meta.value != blank -%}
   {%- assign bundle_data = bundle_meta.value -%}
 
-  <div
+  <pgb-bundle-picker
     class="pgb-bundle-picker"
     data-product-id="{{ product.id }}"
     data-product-gid="gid://shopify/Product/{{ product.id }}"
@@ -21,7 +21,7 @@
     <noscript>
       <p>{{ 'bundle.noscript' | t }}</p>
     </noscript>
-  </div>
+  </pgb-bundle-picker>
 
   {{ 'bundle-picker.css' | asset_url | stylesheet_tag }}
   <script src="{{ 'bundle-picker.js' | asset_url }}" defer></script>
