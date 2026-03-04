@@ -20,6 +20,9 @@ class PgbBundlePicker extends HTMLElement {
             const currencySymbol = this.getAttribute('data-currency-symbol') || '$';
             const customHeading = this.getAttribute('data-heading') || 'Bundle';
 
+            // Show skeleton while loading
+            this.renderSkeleton(config, customHeading);
+
             // Fetch product details via AJAX
             const productData = {};
             for (const group of config.groups) {
@@ -41,9 +44,34 @@ class PgbBundlePicker extends HTMLElement {
             this.interceptAddToCart();
         } catch (err) {
             console.error("Bundle picker error:", err);
-            // Don't overwrite the entire container or it will break statically positioned elements like labels
             this.innerHTML = `<p style="color:red;">Error loading bundles.</p>`;
         }
+    }
+
+    renderSkeleton(config, heading) {
+        const groupCount = config.groups ? config.groups.length : 1;
+        let html = '';
+        if (heading) {
+            html += `<h4>${heading}</h4>`;
+        }
+        html += '<div class="pgb-groups-wrapper">';
+        for (let g = 0; g < groupCount; g++) {
+            const productCount = config.groups[g]?.products?.length || 2;
+            html += '<div class="pgb-group"><div class="pgb-skeleton pgb-skeleton-title"></div><div class="pgb-group-items">';
+            for (let p = 0; p < productCount; p++) {
+                html += `<div class="pgb-product-card pgb-skeleton-card">
+                    <div class="pgb-skeleton pgb-skeleton-checkbox"></div>
+                    <div class="pgb-skeleton pgb-skeleton-image"></div>
+                    <div class="pgb-product-info">
+                        <div class="pgb-skeleton pgb-skeleton-text" style="width:60%"></div>
+                        <div class="pgb-skeleton pgb-skeleton-text" style="width:30%"></div>
+                    </div>
+                </div>`;
+            }
+            html += '</div></div>';
+        }
+        html += '</div>';
+        this.innerHTML = html;
     }
 
     renderGroups(config, productData, locale, currencySymbol, customHeading, mainProductGid) {
@@ -92,6 +120,19 @@ class PgbBundlePicker extends HTMLElement {
                 const cardClass = isEntirelyOutOfStock ? 'pgb-product-card pgb-product-card--unavailable' : 'pgb-product-card';
                 const disabledAttr = isEntirelyOutOfStock ? 'disabled' : '';
 
+                // Get the best image (variant image if available and variants restricted, else product image)
+                let imageUrl = data.featured_image || '';
+                if (allowedVariants.length === 1 && allowedVariants[0].featured_image) {
+                    imageUrl = allowedVariants[0].featured_image.src || imageUrl;
+                } else if (data.images && data.images.length > 0) {
+                    imageUrl = data.images[0] || imageUrl;
+                }
+
+                // Add Shopify image sizing parameter
+                if (imageUrl && !imageUrl.includes('width=')) {
+                    imageUrl = imageUrl.replace(/(\.[a-z0-9]+)$/i, '_100x$1');
+                }
+
                 html += `
         <label class="${cardClass}">
           <input type="checkbox" class="pgb-checkbox" 
@@ -101,6 +142,11 @@ class PgbBundlePicker extends HTMLElement {
                  data-parent-product-gid="${mainProductGid}"
                  data-discount="${prod.discountValue}"
                  ${disabledAttr} />
+`;
+                if (imageUrl) {
+                    html += `<img src="${imageUrl}" alt="${data.title}" class="pgb-product-image" loading="lazy">`;
+                }
+                html += `
           <div class="pgb-product-info">
             <span class="pgb-product-title">${data.title}</span>
             <span class="pgb-product-price">
@@ -178,7 +224,10 @@ class PgbBundlePicker extends HTMLElement {
             const mainVariantId = formData.get('id');
             const mainQty = formData.get('quantity') || 1;
 
-            if (!mainVariantId) return;
+            if (!mainVariantId) {
+                console.error("PGB: No variant ID found in form. Cannot add bundle.");
+                return; // Let the form submit normally
+            }
 
             e.preventDefault();
             e.stopPropagation();
@@ -204,8 +253,7 @@ class PgbBundlePicker extends HTMLElement {
                 if (vid) {
                     items.push({
                         id: parseInt(vid, 10),
-                        quantity: 1, // Defaulting to 1 for bundle item
-                        parent_id: parseInt(mainVariantId, 10),
+                        quantity: 1,
                         properties: {
                             "_bundle_parent_product_id": pgid,
                             "_bundle_group_id": gid
@@ -232,9 +280,11 @@ class PgbBundlePicker extends HTMLElement {
                     document.dispatchEvent(new CustomEvent('pgb:added-to-cart', { detail: { items: cartData.items } }));
                     window.location.href = rootUrl + (rootUrl.endsWith('/') ? 'cart' : '/cart');
                 } else {
-                    const error = await res.json();
+                    const error = await res.json().catch(() => ({}));
                     console.error("PGB: Failed to add products to cart", error);
-                    alert("Erreur lors de l'ajout au panier. Veuillez réessayer.");
+                    const errorMsg = window.pgbTranslations?.addToCartError
+                        || "Error adding to cart. Please try again.";
+                    alert(errorMsg);
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.style.opacity = '1';
@@ -242,7 +292,13 @@ class PgbBundlePicker extends HTMLElement {
                 }
             } catch (err) {
                 console.error("PGB: Network error when adding bundle to cart", err);
-                form.submit();
+                const errorMsg = window.pgbTranslations?.addToCartError
+                    || "Error adding to cart. Please try again.";
+                alert(errorMsg);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                }
             }
         }, true);
     }

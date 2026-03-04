@@ -93,6 +93,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return null;
 };
 
+import {
+  Page,
+  Layout,
+  BlockStack,
+  Card,
+  Text,
+  Button,
+  Banner,
+  List,
+  InlineStack,
+  Icon,
+  Box,
+} from "@shopify/polaris";
+import { PlusIcon, CheckCircleIcon, AlertTriangleIcon } from "@shopify/polaris-icons";
+
 export default function Index() {
   const { hasCartTransform } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
@@ -111,42 +126,77 @@ export default function Index() {
   };
 
   return (
-    <s-page heading="Product Group Bundler">
-      <s-section heading="Bienvenue sur Product Group Bundler">
-        <s-paragraph>
-          Cette application vous permet de créer des lots de produits flexibles directement sur vos pages produits.
-          Naviguez vers vos produits pour commencer à configurer des groupes de lots.
-        </s-paragraph>
-      </s-section>
-      
-      <s-section heading="Configuration de l'application">
-        {hasCartTransform ? (
-          <s-box>
-            <s-text>✅ La fonction Cart Transform est active. Les remises de lots seront appliquées automatiquement dans le panier.</s-text>
-          </s-box>
-        ) : (
-          <s-box>
-            <s-paragraph>
-              <s-text>⚠️ La fonction Cart Transform n'est pas active. Les remises ne seront pas appliquées dans le panier.</s-text>
-            </s-paragraph>
-            <br />
-            <s-button 
-              onClick={handleSetup} 
-              loading={fetcher.state !== "idle"}
-            >
-              Activer les remises de lots
-            </s-button>
-          </s-box>
-        )}
-      </s-section>
-      
-      <s-section heading="Prochaines étapes">
-        <s-unordered-list>
-          <s-list-item>Ajoutez le bloc « Bundle Picker » à votre modèle Produit par défaut dans l'éditeur de thème.</s-list-item>
-          <s-list-item>Allez sur un Produit dans votre Admin Shopify et trouvez le bloc « Groupes de lots » pour configurer les remises.</s-list-item>
-        </s-unordered-list>
-      </s-section>
-    </s-page>
+    <Page title="Product Group Bundler">
+      <BlockStack gap="500">
+        <Layout>
+          {/* Welcome Section */}
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
+                  Bienvenue sur Product Group Bundler
+                </Text>
+                <Text as="p">
+                  Cette application vous permet de créer des lots de produits flexibles directement sur vos pages produits. Améliorez votre panier moyen en offrant des remises sur les achats groupés.
+                </Text>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          {/* Status Section */}
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
+                  Configuration de l'application
+                </Text>
+                
+                {hasCartTransform ? (
+                  <Banner tone="success" icon={CheckCircleIcon}>
+                    <p>
+                      <strong>La fonction Cart Transform est active.</strong> Les remises de lots seront appliquées automatiquement dans le panier et lors du passage en caisse.
+                    </p>
+                  </Banner>
+                ) : (
+                  <Banner tone="warning" icon={AlertTriangleIcon} action={{ content: 'Activer les remises', onAction: handleSetup, loading: fetcher.state !== "idle" }}>
+                    <p>
+                      <strong>La fonction Cart Transform n'est pas active.</strong> Les remises sur les lots ne peuvent pas être appliquées. Veuillez activer la fonction pour que l'application fonctionne correctement.
+                    </p>
+                  </Banner>
+                )}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          {/* Next Steps Section */}
+          <Layout.Section variant="oneThird">
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
+                  Prochaines étapes
+                </Text>
+                <Box paddingBlockEnd="200">
+                  <List type="number">
+                    <List.Item>
+                      Accédez à l'éditeur de thème et ajoutez le bloc <strong>Bundle Picker</strong> à votre modèle Produit.
+                    </List.Item>
+                    <List.Item>
+                      Allez sur une page Produit dans votre Admin Shopify.
+                    </List.Item>
+                    <List.Item>
+                      Trouvez le bloc <strong>Groupes de lots</strong> et configurez vos groupes.
+                    </List.Item>
+                  </List>
+                </Box>
+                <Button variant="primary" icon={PlusIcon} url="shopify:admin/products">
+                  Aller aux produits
+                </Button>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </BlockStack>
+    </Page>
   );
 }
 

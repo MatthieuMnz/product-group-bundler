@@ -26,5 +26,8 @@
   "product": "produit",
   "products": "produits",
   "unnamedGroup": "Groupe sans nom",
-  "manageBundles": "Gérer les lots"
+  "manageBundles": "Gérer les lots",
+  "originalPrice": "Prix d'origine",
+  "bundlePrice": "Prix du lot",
+  "emptyStateDescription": "Les groupes de lots vous permettent de proposer des produits associés ensemble avec une remise. Créez un groupe, ajoutez des produits et définissez une remise pour chacun."
 }

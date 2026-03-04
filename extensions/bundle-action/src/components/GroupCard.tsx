@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { BlockStack, Button, InlineStack, Text, TextField, Divider } from '@shopify/ui-extensions-react/admin';
+import { BlockStack, Box, Badge, Button, InlineStack, Text, TextField, Divider } from '@shopify/ui-extensions-react/admin';
 import { BundleGroup, BundleProduct } from '../utils/types';
 import { ProductEntry } from './ProductEntry';
 import { useProductPicker } from '../hooks/useProductPicker';
@@ -21,19 +21,25 @@ interface GroupCardProps {
 
 export function GroupCard({ group, currentProductId, isExpanded, onToggle, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isLast }: GroupCardProps) {
   const { i18n, query } = useApi();
-  const { pickProducts, fetchVariantsForProducts } = useProductPicker();
+  const { pickProducts, fetchProductMeta } = useProductPicker();
 
-  // Hydrate variant data for products that don't have _variants loaded yet
+  // Hydrate variant + image data for products that don't have _variants loaded yet
   useEffect(() => {
     if (!isExpanded) return;
-    const productsNeedingVariants = group.products.filter(p => !p._variants);
-    if (productsNeedingVariants.length === 0) return;
+    const productsNeedingData = group.products.filter(p => !p._variants);
+    if (productsNeedingData.length === 0) return;
 
-    const productIds = productsNeedingVariants.map(p => p.productId);
-    fetchVariantsForProducts(query, productIds).then(variantMap => {
+    const productIds = productsNeedingData.map(p => p.productId);
+    fetchProductMeta(query, productIds).then(metaMap => {
       const updatedProducts = group.products.map(p => {
-        if (!p._variants && variantMap.has(p.productId)) {
-          return { ...p, _variants: variantMap.get(p.productId) };
+        if (!p._variants && metaMap.has(p.productId)) {
+          const meta = metaMap.get(p.productId)!;
+          return {
+            ...p,
+            _variants: meta.variants,
+            _imageUrl: p._imageUrl || meta.imageUrl,
+            _price: p._price || meta.variants?.[0]?.price,
+          };
         }
         return p;
       });
@@ -68,6 +74,8 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
         variantIds: [],
         discountValue: 0,
         _variants: p.variants,
+        _imageUrl: p.imageUrl,
+        _price: p.variants?.[0]?.price || undefined,
       }));
 
     if (newProducts.length === 0) return;
@@ -78,58 +86,72 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
   // Reordering controls
   const ReorderButtons = () => (
     <InlineStack gap="tight" blockAlignment="center">
-      <Button variant="tertiary" disabled={isFirst} onClick={onMoveUp}>▲</Button>
-      <Button variant="tertiary" disabled={isLast} onClick={onMoveDown}>▼</Button>
+      <Button variant="tertiary" disabled={isFirst} onClick={onMoveUp}>↑</Button>
+      <Button variant="tertiary" disabled={isLast} onClick={onMoveDown}>↓</Button>
     </InlineStack>
   );
 
   // Collapsed: compact summary row
   if (!isExpanded) {
     return (
-      <BlockStack gap="extraTight">
+      <Box padding="base" paddingBlock="small" borderWidth="small" borderRadius="base" borderColor="subdued" background="bg-surface-secondary">
         <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
           <InlineStack gap="base" blockAlignment="center">
             <Button variant="tertiary" onClick={onToggle}>▸</Button>
-            <ReorderButtons />
             <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
+            <Badge tone="info">
+              {group.products.length} {group.products.length !== 1 ? i18n.translate('products') : i18n.translate('product')}
+            </Badge>
           </InlineStack>
-          <Text appearance="subdued">{group.products.length} {group.products.length !== 1 ? i18n.translate('products') : i18n.translate('product')}</Text>
+          <ReorderButtons />
         </InlineStack>
-        <Divider />
-      </BlockStack>
+      </Box>
     );
   }
 
   // Expanded: full editing form
   return (
-    <BlockStack gap="base">
-      <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
-        <InlineStack gap="base" blockAlignment="center">
-          <Button variant="tertiary" onClick={onToggle}>▾</Button>
-          <ReorderButtons />
-          <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
+    <Box padding="base" borderWidth="small" borderRadius="large" borderColor="subdued">
+      <BlockStack gap="base">
+        <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
+          <InlineStack gap="base" blockAlignment="center">
+            <Button variant="tertiary" onClick={onToggle}>▾</Button>
+            <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
+            <Badge tone="info">
+              {group.products.length} {group.products.length !== 1 ? i18n.translate('products') : i18n.translate('product')}
+            </Badge>
+          </InlineStack>
+          <InlineStack gap="base" blockAlignment="center">
+            <ReorderButtons />
+            <Button tone="critical" variant="tertiary" onClick={onRemove}>{i18n.translate('removeGroup')}</Button>
+          </InlineStack>
         </InlineStack>
-        <Button tone="critical" onClick={onRemove}>{i18n.translate('removeGroup')}</Button>
-      </InlineStack>
 
-      <TextField
-        label={i18n.translate('groupName')}
-        value={group.name}
-        onChange={(val: string) => onChange({ name: val })}
-      />
+        <Box paddingBlockEnd="small">
+          <TextField
+            label={i18n.translate('groupName')}
+            value={group.name}
+            onChange={(val: string) => onChange({ name: val })}
+          />
+        </Box>
 
-      {group.products.map((product, index) => (
-        <ProductEntry
-          key={product.productId || index}
-          product={product}
-          onChange={(update) => handleProductChange(index, update)}
-          onRemove={() => handleProductRemove(index)}
-        />
-      ))}
+        {group.products.length > 0 && <Divider />}
 
-      <Button onClick={handleAddProduct}>{i18n.translate('addProduct')}</Button>
-      <Divider />
-    </BlockStack>
+        <BlockStack gap="small">
+          {group.products.map((product, index) => (
+            <ProductEntry
+              key={product.productId || index}
+              product={product}
+              onChange={(update) => handleProductChange(index, update)}
+              onRemove={() => handleProductRemove(index)}
+            />
+          ))}
+        </BlockStack>
+
+        <Box paddingBlockStart="small">
+          <Button onClick={handleAddProduct}>{i18n.translate('addProduct')}</Button>
+        </Box>
+      </BlockStack>
+    </Box>
   );
 }
-

@@ -118,6 +118,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return null;
 };
 
+import {
+  Page,
+  Layout,
+  Card,
+  Text,
+  Button,
+  Banner,
+  BlockStack,
+  Box,
+  InlineStack,
+  List,
+  Icon,
+} from "@shopify/polaris";
+import { CheckCircleIcon, AlertTriangleIcon, SettingsIcon } from "@shopify/polaris-icons";
+
 export default function BundleSettings() {
   const { cartTransforms, hasCartTransform } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
@@ -132,63 +147,102 @@ export default function BundleSettings() {
   }, [fetcher.data, shopify]);
 
   return (
-    <s-page heading="Paramètres des remises de lots">
-      <s-section heading="Fonction Cart Transform">
-        <s-paragraph>
-          <s-text>
-            La fonction Cart Transform applique automatiquement les remises de lots lorsque les clients ajoutent des produits groupés à leur panier. Elle lit la configuration de remise depuis le métachamp du produit et ajuste les prix au passage en caisse.
-          </s-text>
-        </s-paragraph>
+    <Page title="Paramètres des remises de lots">
+      <BlockStack gap="500">
+        <Layout>
+          {/* Main settings section */}
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
+                  Fonction Cart Transform
+                </Text>
+                <Text as="p">
+                  La fonction Cart Transform applique automatiquement les remises de lots lorsque les clients ajoutent des produits groupés à leur panier. Elle lit la configuration de remise depuis le métachamp du produit et ajuste les prix au passage en caisse.
+                </Text>
 
-        {hasCartTransform ? (
-          <s-box>
-            <s-text>✅ Cart Transform est actif. Les remises de lots sont appliquées.</s-text>
-            <br />
-            {cartTransforms.map((ct: any) => (
-              <s-box key={ct.id}>
-                <s-text>ID : {ct.id}</s-text>
-                <br />
-                <s-button
-                  tone="critical"
-                  onClick={() =>
-                    fetcher.submit(
-                      { action: "deactivate", cartTransformId: ct.id },
-                      { method: "POST" }
-                    )
-                  }
-                  loading={fetcher.state !== "idle"}
-                >
-                  Désactiver
-                </s-button>
-              </s-box>
-            ))}
-          </s-box>
-        ) : (
-          <s-box>
-            <s-text>⚠️ Cart Transform n'est pas actif. Les remises de lots ne seront pas appliquées.</s-text>
-            <br />
-            <s-button
-              variant="primary"
-              onClick={() =>
-                fetcher.submit({ action: "activate" }, { method: "POST" })
-              }
-              loading={fetcher.state !== "idle"}
-            >
-              Activer les remises de lots
-            </s-button>
-          </s-box>
-        )}
-      </s-section>
+                {hasCartTransform ? (
+                  <Banner tone="success" icon={CheckCircleIcon}>
+                    <BlockStack gap="300">
+                      <p>
+                        <strong>Cart Transform est actif.</strong> Les remises de lots sont appliquées.
+                      </p>
+                      {cartTransforms.map((ct: any) => (
+                        <Box key={ct.id}>
+                          <InlineStack blockAlign="center" align="space-between">
+                            <Text as="span" variant="bodySm" tone="subdued">ID: {ct.id}</Text>
+                            <Button
+                              tone="critical"
+                              variant="primary"
+                              onClick={() => {
+                                fetcher.submit(
+                                  { action: "deactivate", cartTransformId: ct.id },
+                                  { method: "POST" }
+                                );
+                              }}
+                              loading={fetcher.state !== "idle"}
+                            >
+                              Désactiver
+                            </Button>
+                          </InlineStack>
+                        </Box>
+                      ))}
+                    </BlockStack>
+                  </Banner>
+                ) : (
+                  <Banner tone="warning" icon={AlertTriangleIcon}>
+                    <BlockStack gap="300">
+                      <p>
+                        <strong>Cart Transform n'est pas actif.</strong> Les remises sur les lots ne peuvent pas être appliquées.
+                      </p>
+                      <InlineStack>
+                        <Button
+                          variant="primary"
+                          onClick={() => {
+                            fetcher.submit({ action: "activate" }, { method: "POST" });
+                          }}
+                          loading={fetcher.state !== "idle"}
+                        >
+                          Activer les remises de lots
+                        </Button>
+                      </InlineStack>
+                    </BlockStack>
+                  </Banner>
+                )}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
 
-      <s-section heading="Comment ça fonctionne">
-        <s-unordered-list>
-          <s-list-item>Lorsqu'un client ajoute un produit groupé à son panier, la fonction Cart Transform s'exécute automatiquement.</s-list-item>
-          <s-list-item>Elle lit la configuration du lot depuis le métachamp du produit parent.</s-list-item>
-          <s-list-item>Elle valide la relation de lot et applique la remise configurée.</s-list-item>
-          <s-list-item>Le prix remisé est affiché dans le panier et au passage en caisse.</s-list-item>
-        </s-unordered-list>
-      </s-section>
-    </s-page>
+          {/* How it works section */}
+          <Layout.Section variant="oneThird">
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack blockAlign="center" gap="200">
+                  <Icon source={SettingsIcon} />
+                  <Text as="h2" variant="headingMd">
+                    Comment ça fonctionne
+                  </Text>
+                </InlineStack>
+                <List type="number">
+                  <List.Item>
+                    Lorsqu'un client ajoute un produit groupé à son panier, la fonction Cart Transform s'exécute automatiquement.
+                  </List.Item>
+                  <List.Item>
+                    Elle lit la configuration du lot depuis le métachamp du produit parent.
+                  </List.Item>
+                  <List.Item>
+                    Elle valide la relation de lot et applique la remise configurée.
+                  </List.Item>
+                  <List.Item>
+                    Le prix remisé est affiché dans le panier et au passage en caisse.
+                  </List.Item>
+                </List>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </BlockStack>
+    </Page>
   );
 }
 

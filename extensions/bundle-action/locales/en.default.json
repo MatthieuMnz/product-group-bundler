@@ -26,5 +26,8 @@
   "product": "product",
   "products": "products",
   "unnamedGroup": "Unnamed group",
-  "manageBundles": "Manage bundles"
+  "manageBundles": "Manage bundles",
+  "originalPrice": "Original price",
+  "bundlePrice": "Bundle price",
+  "emptyStateDescription": "Bundle groups let you offer related products together at a discount. Create a group, add products, and set a discount for each."
 }

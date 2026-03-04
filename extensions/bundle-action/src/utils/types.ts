@@ -2,6 +2,7 @@ export interface VariantInfo {
   id: string;
   title: string;
   price?: string;
+  imageUrl?: string;
 }
 
 export interface BundleProduct {
@@ -12,6 +13,10 @@ export interface BundleProduct {
   discountValue: number;
   /** Transient — populated at runtime for UI, not persisted to metafield */
   _variants?: VariantInfo[];
+  /** Transient — product featured image URL for admin preview */
+  _imageUrl?: string;
+  /** Transient — product price string for admin preview (first variant price) */
+  _price?: string;
 }
 
 export interface BundleGroup {

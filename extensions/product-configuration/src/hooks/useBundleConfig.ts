@@ -37,6 +37,8 @@ export function useBundleConfig(productId: string) {
     try {
       setIsLoading(true);
       const namespace = await getNamespace();
+      
+      // 1. Fetch the metafield config first
       const res = await query<any>(`
         query GetBundleGroups($productId: ID!, $namespace: String!) {
           product(id: $productId) {
@@ -48,7 +50,55 @@ export function useBundleConfig(productId: string) {
         }`, { variables: { productId, namespace } });
         
       if (res.data?.product?.metafield?.value) {
-        setConfig(JSON.parse(res.data.product.metafield.value));
+        let parsedConfig = JSON.parse(res.data.product.metafield.value);
+        
+        // 2. Extract up to 3 product IDs from EACH of the first 2 groups to fetch images for the preview
+        const previewGids: string[] = [];
+        parsedConfig.groups.slice(0, 2).forEach((g: any) => {
+          g.products.slice(0, 3).forEach((p: any) => previewGids.push(p.productId));
+        });
+        
+        if (previewGids.length > 0) {
+          const imageRes = await query<any>(`
+            query GetProductImages($ids: [ID!]!) {
+              nodes(ids: $ids) {
+                ... on Product {
+                  id
+                  title
+                  featuredImage {
+                    url(transform: { maxWidth: 80 })
+                  }
+                }
+              }
+            }`, { variables: { ids: previewGids } });
+            
+          if (imageRes.data?.nodes) {
+            const imageMap = new Map<string, { title: string, imageUrl?: string }>();
+            imageRes.data.nodes.forEach((node: any) => {
+              if (node && node.id) {
+                imageMap.set(node.id, {
+                  title: node.title,
+                  imageUrl: node.featuredImage?.url
+                });
+              }
+            });
+            
+            // 3. Hydrate the config with images for the preview
+            parsedConfig.groups = parsedConfig.groups.map((g: any) => ({
+              ...g,
+              products: g.products.map((p: any) => {
+                const meta = imageMap.get(p.productId);
+                return {
+                  ...p,
+                  _imageUrl: meta?.imageUrl,
+                  title: p.title || meta?.title
+                };
+              })
+            }));
+          }
+        }
+        
+        setConfig(parsedConfig);
       } else {
         setConfig({ version: 1, groups: [] });
       }

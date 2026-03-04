@@ -7,6 +7,8 @@
     "selectVariant": "Sélectionnez une option",
     "selected": "Sélectionné",
     "outOfStock": "Rupture de stock",
-    "noscript": "Veuillez activer JavaScript pour voir les offres de lots."
+    "noscript": "Veuillez activer JavaScript pour voir les offres de lots.",
+    "addToCartError": "Erreur lors de l'ajout au panier. Veuillez réessayer.",
+    "bundledItem": "Fait partie d'un lot"
   }
 }

@@ -22,7 +22,7 @@
 
 {%- if is_bundled_item -%}
   <span class="pgb-cart-badge" title="Group ID: {{ bundle_group_id }}">
-    {{ 'pgb.cart.bundled_item' | t | default: 'Part of a bundle' }}
+    {{ 'bundle.bundledItem' | t | default: 'Part of a bundle' }}
   </span>
 
   <style>
@@ -30,8 +30,8 @@
       display: inline-block;
       margin-left: 8px;
       padding: 2px 6px;
-      background-color: #e4e5e7;
-      color: #202223;
+      background-color: rgba(222, 26, 0, 0.08); /* Brand red with opacity */
+      color: #de1a00; /* Brand primary */
       font-size: 0.75em;
       font-weight: 600;
       text-transform: uppercase;

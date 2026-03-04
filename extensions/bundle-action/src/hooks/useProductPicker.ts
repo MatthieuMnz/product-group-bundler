@@ -13,6 +13,7 @@ interface PickedProduct {
   title: string;
   handle: string;
   variants: PickedVariant[];
+  imageUrl?: string;
 }
 
 export function useProductPicker() {
@@ -33,34 +34,45 @@ export function useProductPicker() {
 
       if (!selected || selected.length === 0) return [];
 
-      // Fetch variant details for selected products
+      // Fetch variant details + images for selected products
       const productIds = selected.map((p: any) => p.id);
-      const variantMap = await fetchVariantsForProducts(query, productIds);
+      const productMeta = await fetchProductMeta(query, productIds);
 
-      return selected.map((product: any) => ({
-        id: product.id,
-        title: product.title,
-        handle: product.handle,
-        variants: variantMap.get(product.id) || [],
-      }));
+      return selected.map((product: any) => {
+        const meta = productMeta.get(product.id);
+        return {
+          id: product.id,
+          title: product.title,
+          handle: product.handle,
+          variants: meta?.variants || [],
+          imageUrl: meta?.imageUrl || undefined,
+        };
+      });
     } catch (e) {
       console.error('Product picker error:', e);
       return [];
     }
   }, [resourcePicker, query]);
 
-  const fetchVariantsForProducts = async (
+  interface ProductMetaResult {
+    variants: PickedVariant[];
+    imageUrl?: string;
+  }
+
+  const fetchProductMeta = async (
     queryFn: any,
     productIds: string[]
-  ): Promise<Map<string, PickedVariant[]>> => {
-    const map = new Map<string, PickedVariant[]>();
+  ): Promise<Map<string, ProductMetaResult>> => {
+    const map = new Map<string, ProductMetaResult>();
     try {
-      const ids = productIds.map(id => `"${id}"`).join(', ');
       const res = await queryFn(`
         query GetProductVariants($ids: [ID!]!) {
           nodes(ids: $ids) {
             ... on Product {
               id
+              featuredImage {
+                url(transform: { maxWidth: 80 })
+              }
               variants(first: 100) {
                 edges {
                   node {
@@ -78,23 +90,36 @@ export function useProductPicker() {
       if (res.data?.nodes) {
         for (const node of res.data.nodes) {
           if (node?.id && node?.variants?.edges) {
-            map.set(
-              node.id,
-              node.variants.edges.map((e: any) => ({
+            map.set(node.id, {
+              variants: node.variants.edges.map((e: any) => ({
                 id: e.node.id,
                 title: e.node.title,
                 price: e.node.price,
-              }))
-            );
+              })),
+              imageUrl: node.featuredImage?.url || undefined,
+            });
           }
         }
       }
     } catch (e) {
-      console.error('Failed to fetch variants:', e);
+      console.error('Failed to fetch product meta:', e);
     }
     return map;
   };
 
-  return { pickProducts, fetchVariantsForProducts };
+  // Backward-compat wrapper for GroupCard hydration
+  const fetchVariantsForProducts = async (
+    queryFn: any,
+    productIds: string[]
+  ): Promise<Map<string, PickedVariant[]>> => {
+    const meta = await fetchProductMeta(queryFn, productIds);
+    const variantMap = new Map<string, PickedVariant[]>();
+    for (const [id, data] of meta) {
+      variantMap.set(id, data.variants);
+    }
+    return variantMap;
+  };
+
+  return { pickProducts, fetchVariantsForProducts, fetchProductMeta };
 }
 

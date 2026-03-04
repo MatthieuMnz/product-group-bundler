@@ -80,8 +80,17 @@ export function run(input: RunInput): FunctionRunResult {
     }
 
     // Calculate and apply discount
+    const discountValue = bundleProduct.discountValue;
+
+    // Skip if no discount to apply
+    if (!discountValue || discountValue <= 0) continue;
+
     const originalPrice = parseFloat(line.cost.amountPerQuantity.amount);
-    const newPrice = Math.max(0, originalPrice - bundleProduct.discountValue);
+
+    // Guard against NaN (e.g. if amount is missing or malformed)
+    if (isNaN(originalPrice)) continue;
+
+    const newPrice = Math.max(0, originalPrice - discountValue);
 
     operations.push({
       update: {

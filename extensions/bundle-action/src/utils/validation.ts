@@ -6,8 +6,14 @@ export function generateId() {
     : Math.random().toString(36).substring(2, 15);
 }
 
-export function validateConfig(config: BundleConfig, currentProductId: string): string[] {
+export interface ValidationResult {
+  errors: string[];
+  warnings: string[];
+}
+
+export function validateConfig(config: BundleConfig, currentProductId: string): ValidationResult {
   const errors: string[] = [];
+  const warnings: string[] = [];
 
   config.groups.forEach((group, groupIndex) => {
     if (!group.name || group.name.trim() === '') {
@@ -21,6 +27,14 @@ export function validateConfig(config: BundleConfig, currentProductId: string): 
       if (product.discountValue < 0) {
         errors.push(`La valeur de la remise doit être supérieure ou égale à zéro.`);
       }
+      // Warn if product is missing a handle (needed for storefront)
+      if (!product.handle) {
+        warnings.push(`Le produit ${product.title || product.productId} dans le groupe "${group.name}" n'a pas de handle. Il ne sera pas affiché sur la vitrine.`);
+      }
+      // Warn about unreasonably high discounts
+      if (product.discountValue > 1000) {
+        warnings.push(`La remise de ${product.discountValue}$ pour "${product.title || product.productId}" dans "${group.name}" semble élevée. Veuillez vérifier.`);
+      }
     });
 
     // Check for duplicates in same group
@@ -31,5 +45,6 @@ export function validateConfig(config: BundleConfig, currentProductId: string): 
     }
   });
 
-  return errors;
+  return { errors, warnings };
 }
+

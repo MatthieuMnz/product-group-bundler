@@ -103,40 +103,86 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return { products };
 };
 
+import {
+  Page,
+  Layout,
+  Card,
+  ResourceList,
+  ResourceItem,
+  Text,
+  Thumbnail,
+  EmptyState,
+  Box,
+  InlineStack,
+  Badge,
+} from "@shopify/polaris";
+import { ImageIcon } from "@shopify/polaris-icons";
+
 export default function Bundles() {
   const { products } = useLoaderData<typeof loader>();
 
   return (
-    <s-page heading="Produits avec des lots">
-      <s-section>
-        {products.length === 0 ? (
-          <s-box>
-            <s-text>Aucun produit n'a de groupe de lots configuré pour le moment.</s-text>
-            <br />
-            <s-text>
-              Pour commencer, allez sur un produit dans l'Admin Shopify et configurez les groupes de lots dans la fiche de configuration « Groupes de lots ».
-            </s-text>
-          </s-box>
-        ) : (
-          <s-box>
-            <s-text>{products.length} produit{products.length !== 1 ? 's' : ''} avec des groupes de lots</s-text>
-            <br />
-            <s-box padding-block-start="base">
-              {products.map((product: ProductWithBundles) => (
-                <s-box key={product.id} padding-block-end="base" border-block-end="base">
-                  <s-box padding="base">
-                    <s-text><b>{product.title}</b></s-text>
-                    <s-text tone="neutral">
-                      {product.groupCount} groupe{product.groupCount !== 1 ? 's' : ''} · {product.totalProducts} produit{product.totalProducts !== 1 ? 's' : ''} associé{product.totalProducts !== 1 ? 's' : ''}
-                    </s-text>
-                  </s-box>
-                </s-box>
-              ))}
-            </s-box>
-          </s-box>
-        )}
-      </s-section>
-    </s-page>
+    <Page title="Produits avec des lots">
+      <Layout>
+        <Layout.Section>
+          <Card padding="0">
+            {products.length === 0 ? (
+              <Box padding="400">
+                <EmptyState
+                  heading="Aucun lot configuré"
+                  image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                  action={{ content: "Aller aux produits", url: "shopify:admin/products" }}
+                >
+                  <p>
+                    Pour commencer, allez sur un produit dans l'Admin Shopify et configurez les groupes de lots dans le bloc « Groupes de lots ».
+                  </p>
+                </EmptyState>
+              </Box>
+            ) : (
+              <ResourceList
+                resourceName={{ singular: "produit", plural: "produits" }}
+                items={products}
+                renderItem={(product: ProductWithBundles) => {
+                  const media = product.imageUrl ? (
+                    <Thumbnail source={product.imageUrl} alt={product.title} size="medium" />
+                  ) : (
+                    <Thumbnail source={ImageIcon} alt={product.title} size="medium" />
+                  );
+
+                  return (
+                    <ResourceItem
+                      id={product.id}
+                      url={`shopify:admin/products/${product.id.split('/').pop()}`}
+                      media={media}
+                      accessibilityLabel={`Voir les détails de ${product.title}`}
+                    >
+                      <InlineStack align="space-between" blockAlign="center">
+                        <Box>
+                          <Text variant="bodyMd" fontWeight="bold" as="h3">
+                            {product.title}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            {product.handle}
+                          </Text>
+                        </Box>
+                        <InlineStack gap="200" blockAlign="center">
+                          <Badge tone="info">
+                            {`${product.groupCount} groupe${product.groupCount !== 1 ? 's' : ''}`}
+                          </Badge>
+                          <Badge tone="new">
+                            {`${product.totalProducts} produit${product.totalProducts !== 1 ? 's' : ''} associé${product.totalProducts !== 1 ? 's' : ''}`}
+                          </Badge>
+                        </InlineStack>
+                      </InlineStack>
+                    </ResourceItem>
+                  );
+                }}
+              />
+            )}
+          </Card>
+        </Layout.Section>
+      </Layout>
+    </Page>
   );
 }
 

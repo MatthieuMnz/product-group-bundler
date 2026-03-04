@@ -8,6 +8,8 @@ import {
   InlineStack,
   Text,
   Banner,
+  ProgressIndicator,
+  Box,
 } from '@shopify/ui-extensions-react/admin';
 import { useState } from 'react';
 import { useBundleConfig } from './hooks/useBundleConfig';
@@ -28,12 +30,15 @@ function App() {
   const { config, isLoading, saveConfig, setConfig } = useBundleConfig(productId);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
       <AdminAction title={i18n.translate('blockTitle')} primaryAction={<Button disabled>{i18n.translate('save')}</Button>}>
-        <Text>{i18n.translate('saving')}</Text>
+        <BlockStack gap="base">
+          <ProgressIndicator />
+        </BlockStack>
       </AdminAction>
     );
   }
@@ -41,10 +46,15 @@ function App() {
   const handleSave = async () => {
     if (!config) return;
     setErrors([]);
-    const validationErrors = validateConfig(config, productId);
-    if (validationErrors.length > 0) {
-      setErrors(validationErrors);
+    setWarnings([]);
+    const result = validateConfig(config, productId);
+    if (result.errors.length > 0) {
+      setErrors(result.errors);
       return;
+    }
+    // Show warnings but don't block save
+    if (result.warnings.length > 0) {
+      setWarnings(result.warnings);
     }
 
     setIsSaving(true);
@@ -136,10 +146,20 @@ function App() {
           </Banner>
         )}
 
+        {warnings.length > 0 && (
+          <Banner tone="warning">
+            <BlockStack gap="extraTight">
+              {warnings.map((w, i) => (
+                <Text key={i}>⚠ {w}</Text>
+              ))}
+            </BlockStack>
+          </Banner>
+        )}
+
         {config?.groups.length === 0 ? (
           <EmptyState onAdd={handleAddGroup} />
         ) : (
-          <BlockStack gap="base">
+          <BlockStack gap="large">
             {config?.groups.map((group, index) => (
               <GroupCard
                 key={group.id}
@@ -156,9 +176,14 @@ function App() {
               />
             ))}
 
-            <InlineStack inlineAlignment="center">
-              <Button onClick={handleAddGroup}>{i18n.translate('addGroup')}</Button>
-            </InlineStack>
+            <Box paddingBlockStart="base" paddingBlockEnd="large">
+              <Divider />
+              <Box paddingBlockStart="base">
+                <InlineStack inlineAlignment="center">
+                  <Button onClick={handleAddGroup}>{i18n.translate('addGroup')}</Button>
+                </InlineStack>
+              </Box>
+            </Box>
           </BlockStack>
         )}
       </BlockStack>
