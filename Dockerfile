@@ -1,18 +1,43 @@
-FROM node:20-alpine
-RUN apk add --no-cache openssl
+# ── Builder stage ──────────────────────────────────────────────
+FROM node:22-alpine AS builder
 
-EXPOSE 3000
+RUN corepack enable pnpm
 
 WORKDIR /app
 
-ENV NODE_ENV=production
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY extensions/product-configuration/package.json extensions/product-configuration/
+COPY extensions/bundle-action/package.json extensions/bundle-action/
+COPY extensions/cart-transformer/package.json extensions/cart-transformer/
 
-COPY package.json package-lock.json* ./
-
-RUN npm ci --omit=dev && npm cache clean --force
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN npm run build
+RUN pnpm run build
 
-CMD ["npm", "run", "docker-start"]
+# ── Runtime stage ─────────────────────────────────────────────
+FROM node:22-alpine
+
+RUN corepack enable pnpm
+RUN apk add --no-cache openssl
+
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY extensions/product-configuration/package.json extensions/product-configuration/
+COPY extensions/bundle-action/package.json extensions/bundle-action/
+COPY extensions/cart-transformer/package.json extensions/cart-transformer/
+
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=builder /app/build ./build
+COPY prisma ./prisma
+
+RUN mkdir -p /data
+
+EXPOSE 3100
+
+CMD ["pnpm", "run", "docker-start"]

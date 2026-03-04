@@ -1,0 +1,18 @@
+services:
+  product-group-bundler:
+    build: .
+    container_name: product-group-bundler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3100"
+      DATABASE_URL: "file:/data/dev.sqlite"
+    volumes:
+      - product-group-bundler-db:/data
+    ports:
+      - "43100:3100"
+
+volumes:
+  product-group-bundler-db:
