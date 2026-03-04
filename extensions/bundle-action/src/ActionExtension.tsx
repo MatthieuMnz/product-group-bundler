@@ -10,6 +10,7 @@ import {
   Banner,
   ProgressIndicator,
   Box,
+  Divider,
 } from '@shopify/ui-extensions-react/admin';
 import { useState } from 'react';
 import { useBundleConfig } from './hooks/useBundleConfig';
