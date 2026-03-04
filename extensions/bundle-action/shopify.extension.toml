@@ -1,0 +1,16 @@
+api_version = "2025-07"
+
+[[extensions]]
+uid = "8912f606-80a1-31d3-2b01-df3c5d58d5c41fff4b33"
+type = "ui_extension"
+name = "Bundle Configuration Action"
+handle = "bundle-config-action"
+description = "Full screen modal action for configuring product bundles"
+
+  [[extensions.targeting]]
+  target = "admin.product-details.action.render"
+  module = "./src/ActionExtension.tsx"
+
+[extensions.capabilities]
+api_access = true
+block_progress = false

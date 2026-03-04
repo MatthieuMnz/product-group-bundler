@@ -31,8 +31,7 @@ function App() {
   }
 
   const handleManage = () => {
-    // Navigate to the action extension
-    // The handle is defined in shopify.extension.toml
+    // Navigate to the action extension using the defined handle in shopify.extension.toml
     navigation.navigate('extension://bundle-config-action');
   };
 

@@ -26,8 +26,5 @@
   "product": "product",
   "products": "products",
   "unnamedGroup": "Unnamed group",
-  "manageBundles": "Manage bundles",
-  "discountType": "Discount type",
-  "fixedAmount": "Fixed amount",
-  "percentage": "Percentage"
+  "manageBundles": "Manage bundles"
 }

@@ -8,9 +8,8 @@ handle = "bundle-group-manager"
 description = "Configure product bundle groups with discounts"
 
   [[extensions.targeting]]
-  target = "admin.product-details.action.render"
-  module = "./src/ActionExtension.tsx"
-  handle = "bundle-config-action"
+  target = "admin.product-details.block.render"
+  module = "./src/BlockExtension.tsx"
 
 [extensions.capabilities]
 api_access = true

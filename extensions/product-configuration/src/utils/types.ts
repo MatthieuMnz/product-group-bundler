@@ -3,7 +3,6 @@ export interface BundleProduct {
   handle?: string;
   title?: string;
   variantIds: string[];
-  discountType: 'fixed_amount' | 'percentage';
   discountValue: number;
 }
 

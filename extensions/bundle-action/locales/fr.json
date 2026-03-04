@@ -26,8 +26,5 @@
   "product": "produit",
   "products": "produits",
   "unnamedGroup": "Groupe sans nom",
-  "manageBundles": "Gérer les lots",
-  "discountType": "Type de remise",
-  "fixedAmount": "Montant fixe",
-  "percentage": "Pourcentage"
+  "manageBundles": "Gérer les lots"
 }
