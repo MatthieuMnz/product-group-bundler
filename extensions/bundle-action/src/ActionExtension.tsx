@@ -89,6 +89,26 @@ function App() {
     }
   };
 
+  const handleGroupMove = (index: number, direction: 'up' | 'down') => {
+    if (!config) return;
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === config.groups.length - 1) return;
+
+    const newGroups = [...config.groups];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap objects
+    const temp = newGroups[index];
+    newGroups[index] = newGroups[targetIndex];
+    newGroups[targetIndex] = temp;
+
+    // Update sortOrder
+    newGroups[index].sortOrder = index;
+    newGroups[targetIndex].sortOrder = targetIndex;
+
+    setConfig({ ...config, groups: newGroups });
+  };
+
   const handleToggleGroup = (groupId: string) => {
     setExpandedGroupId((prev) => (prev === groupId ? null : groupId));
   };
@@ -129,6 +149,10 @@ function App() {
                 onToggle={() => handleToggleGroup(group.id)}
                 onChange={(update) => handleGroupChange(index, update)}
                 onRemove={() => handleGroupRemove(index)}
+                onMoveUp={() => handleGroupMove(index, 'up')}
+                onMoveDown={() => handleGroupMove(index, 'down')}
+                isFirst={index === 0}
+                isLast={index === (config?.groups.length || 0) - 1}
               />
             ))}
 

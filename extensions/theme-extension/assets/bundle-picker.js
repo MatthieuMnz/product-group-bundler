@@ -51,6 +51,10 @@ class PgbBundlePicker extends HTMLElement {
         if (customHeading) {
             html += `<h4>${customHeading}</h4>`;
         }
+
+        // Try to get translations from a hidden element if provided by the theme, otherwise fallback
+        const tOutOfStock = window.pgbTranslations?.outOfStock || 'Out of stock';
+
         html += `<div class="pgb-groups-wrapper">`;
 
         config.groups.forEach((group) => {
@@ -61,25 +65,67 @@ class PgbBundlePicker extends HTMLElement {
 
             group.products.forEach(prod => {
                 const data = productData[prod.handle];
+                // If product doesn't exist or has no variants, skip rendering
                 if (!data || !data.variants || data.variants.length === 0) return;
 
-                const firstVariant = data.variants[0];
-                const origPrice = (firstVariant.price / 100).toFixed(2);
+                // Determine which variants are allowed
+                let allowedVariants = data.variants;
+                if (prod.variantIds && prod.variantIds.length > 0) {
+                    allowedVariants = data.variants.filter(v => {
+                        const variantGid = `gid://shopify/ProductVariant/${v.id}`;
+                        return prod.variantIds.includes(variantGid) || prod.variantIds.includes(String(v.id));
+                    });
+                    if (allowedVariants.length === 0) allowedVariants = data.variants;
+                }
+
+                // Check availability
+                const availableVariants = allowedVariants.filter(v => v.available);
+                const isEntirelyOutOfStock = availableVariants.length === 0;
+
+                // Default to the first *available* variant if possible, otherwise just the first
+                const defaultVariant = availableVariants.length > 0 ? availableVariants[0] : allowedVariants[0];
+
+                const origPrice = (defaultVariant.price / 100).toFixed(2);
                 const newPrice = Math.max(0, origPrice - prod.discountValue).toFixed(2);
+                const hasMultipleVariants = allowedVariants.length > 1;
+
+                const cardClass = isEntirelyOutOfStock ? 'pgb-product-card pgb-product-card--unavailable' : 'pgb-product-card';
+                const disabledAttr = isEntirelyOutOfStock ? 'disabled' : '';
 
                 html += `
-        <label class="pgb-product-card">
+        <label class="${cardClass}">
           <input type="checkbox" class="pgb-checkbox" 
                  data-group-id="${group.id}" 
                  data-product-id="${prod.productId}" 
-                 data-variant-id="${firstVariant.id}" 
-                 data-parent-product-gid="${mainProductGid}" />
+                 data-variant-id="${defaultVariant.id}" 
+                 data-parent-product-gid="${mainProductGid}"
+                 data-discount="${prod.discountValue}"
+                 ${disabledAttr} />
           <div class="pgb-product-info">
             <span class="pgb-product-title">${data.title}</span>
             <span class="pgb-product-price">
               <span class="pgb-old-price">${currencySymbol}${origPrice}</span>
               <span class="pgb-new-price">${currencySymbol}${newPrice}</span>
-            </span>
+            </span>`;
+
+                if (isEntirelyOutOfStock) {
+                    html += `<span class="pgb-out-of-stock-badge">${tOutOfStock}</span>`;
+                }
+
+                // Variant selector for multi-variant products
+                if (hasMultipleVariants && !isEntirelyOutOfStock) {
+                    html += `
+            <select class="pgb-variant-selector" data-product-handle="${prod.handle}" data-discount="${prod.discountValue}" data-currency="${currencySymbol}">`;
+                    allowedVariants.forEach((v) => {
+                        const vDisabled = !v.available ? ' disabled' : '';
+                        const vSelected = v.id === defaultVariant.id ? ' selected' : '';
+                        const vLabel = v.title + (v.available ? ` — ${currencySymbol}${(v.price / 100).toFixed(2)}` : ` (${tOutOfStock})`);
+                        html += `<option value="${v.id}" data-price="${v.price}"${vDisabled}${vSelected}>${vLabel}</option>`;
+                    });
+                    html += `</select>`;
+                }
+
+                html += `
           </div>
         </label>
       `;
@@ -90,6 +136,28 @@ class PgbBundlePicker extends HTMLElement {
 
         html += '</div>';
         this.innerHTML = html;
+
+        // Attach variant change listeners
+        this.querySelectorAll('.pgb-variant-selector').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const sel = e.target;
+                const card = sel.closest('.pgb-product-card');
+                const checkbox = card.querySelector('.pgb-checkbox');
+                const selectedOption = sel.options[sel.selectedIndex];
+                const variantPrice = parseFloat(selectedOption.dataset.price) / 100;
+                const discount = parseFloat(sel.dataset.discount) || 0;
+                const currency = sel.dataset.currency || '$';
+
+                // Update the variant ID on the checkbox
+                checkbox.setAttribute('data-variant-id', sel.value);
+
+                // Update displayed prices
+                const oldPriceEl = card.querySelector('.pgb-old-price');
+                const newPriceEl = card.querySelector('.pgb-new-price');
+                if (oldPriceEl) oldPriceEl.textContent = `${currency}${variantPrice.toFixed(2)}`;
+                if (newPriceEl) newPriceEl.textContent = `${currency}${Math.max(0, variantPrice - discount).toFixed(2)}`;
+            });
+        });
     }
 
     interceptAddToCart() {

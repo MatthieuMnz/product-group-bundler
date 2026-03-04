@@ -1,0 +1,42 @@
+{% comment %}
+  product-group-bundler: Bundle Cart Badge Snippet
+
+  Instructions:
+  1. Locate your theme's cart item template (usually in snippets/cart-item.liquid, sections/main-cart-items.liquid, or similar).
+  2. Find the code that renders the line item title or properties.
+  3. Include this snippet, passing the `item` as a variable:
+     {% render 'bundle-cart-badge', item: item %}
+{% endcomment %}
+
+{%- assign is_bundled_item = false -%}
+{%- assign bundle_group_id = blank -%}
+
+{%- for property in item.properties -%}
+  {%- if property.first == '_bundle_parent_product_id' and property.last != blank -%}
+    {%- assign is_bundled_item = true -%}
+  {%- endif -%}
+  {%- if property.first == '_bundle_group_id' and property.last != blank -%}
+    {%- assign bundle_group_id = property.last -%}
+  {%- endif -%}
+{%- endfor -%}
+
+{%- if is_bundled_item -%}
+  <span class="pgb-cart-badge" title="Group ID: {{ bundle_group_id }}">
+    {{ 'pgb.cart.bundled_item' | t | default: 'Part of a bundle' }}
+  </span>
+
+  <style>
+    .pgb-cart-badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 6px;
+      background-color: #e4e5e7;
+      color: #202223;
+      font-size: 0.75em;
+      font-weight: 600;
+      text-transform: uppercase;
+      border-radius: 4px;
+      vertical-align: middle;
+    }
+  </style>
+{%- endif -%}

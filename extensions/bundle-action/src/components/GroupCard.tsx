@@ -4,6 +4,7 @@ import { BundleGroup, BundleProduct } from '../utils/types';
 import { ProductEntry } from './ProductEntry';
 import { useProductPicker } from '../hooks/useProductPicker';
 import { useApi } from '@shopify/ui-extensions-react/admin';
+import { useEffect } from 'react';
 
 interface GroupCardProps {
   group: BundleGroup;
@@ -12,11 +13,33 @@ interface GroupCardProps {
   onToggle: () => void;
   onChange: (update: Partial<BundleGroup>) => void;
   onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
-export function GroupCard({ group, currentProductId, isExpanded, onToggle, onChange, onRemove }: GroupCardProps) {
-  const { i18n } = useApi();
-  const { pickProducts } = useProductPicker();
+export function GroupCard({ group, currentProductId, isExpanded, onToggle, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isLast }: GroupCardProps) {
+  const { i18n, query } = useApi();
+  const { pickProducts, fetchVariantsForProducts } = useProductPicker();
+
+  // Hydrate variant data for products that don't have _variants loaded yet
+  useEffect(() => {
+    if (!isExpanded) return;
+    const productsNeedingVariants = group.products.filter(p => !p._variants);
+    if (productsNeedingVariants.length === 0) return;
+
+    const productIds = productsNeedingVariants.map(p => p.productId);
+    fetchVariantsForProducts(query, productIds).then(variantMap => {
+      const updatedProducts = group.products.map(p => {
+        if (!p._variants && variantMap.has(p.productId)) {
+          return { ...p, _variants: variantMap.get(p.productId) };
+        }
+        return p;
+      });
+      onChange({ products: updatedProducts });
+    });
+  }, [isExpanded]);
 
   const handleProductChange = (index: number, update: Partial<BundleProduct>) => {
     const products = [...group.products];
@@ -44,12 +67,21 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
         title: p.title,
         variantIds: [],
         discountValue: 0,
+        _variants: p.variants,
       }));
 
     if (newProducts.length === 0) return;
 
     onChange({ products: [...group.products, ...newProducts] });
   };
+
+  // Reordering controls
+  const ReorderButtons = () => (
+    <InlineStack gap="tight" blockAlignment="center">
+      <Button variant="tertiary" disabled={isFirst} onClick={onMoveUp}>▲</Button>
+      <Button variant="tertiary" disabled={isLast} onClick={onMoveDown}>▼</Button>
+    </InlineStack>
+  );
 
   // Collapsed: compact summary row
   if (!isExpanded) {
@@ -58,6 +90,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
         <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
           <InlineStack gap="base" blockAlignment="center">
             <Button variant="tertiary" onClick={onToggle}>▸</Button>
+            <ReorderButtons />
             <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
           </InlineStack>
           <Text appearance="subdued">{group.products.length} {group.products.length !== 1 ? i18n.translate('products') : i18n.translate('product')}</Text>
@@ -73,6 +106,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
       <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
         <InlineStack gap="base" blockAlignment="center">
           <Button variant="tertiary" onClick={onToggle}>▾</Button>
+          <ReorderButtons />
           <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
         </InlineStack>
         <Button tone="critical" onClick={onRemove}>{i18n.translate('removeGroup')}</Button>
@@ -98,3 +132,4 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
     </BlockStack>
   );
 }
+

@@ -1,4 +1,5 @@
-pgb-bundle-picker, .pgb-bundle-picker {
+pgb-bundle-picker,
+.pgb-bundle-picker {
   display: block;
   margin: 20px 0;
   padding: 15px;
@@ -58,4 +59,44 @@ pgb-bundle-picker, .pgb-bundle-picker {
 .pgb-new-price {
   color: #008060;
   font-weight: bold;
+}
+
+.pgb-variant-selector {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid #c9cccf;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 0.9em;
+  font-family: inherit;
+  color: #202223;
+}
+
+.pgb-variant-selector:focus {
+  outline: none;
+  border-color: #008060;
+  box-shadow: 0 0 0 1px #008060;
+}
+
+.pgb-product-card--unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(100%);
+}
+
+.pgb-product-card--unavailable input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
+.pgb-out-of-stock-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background-color: #f4f6f8;
+  color: #6d7175;
+  font-size: 0.8em;
+  font-weight: bold;
+  border-radius: 4px;
 }
