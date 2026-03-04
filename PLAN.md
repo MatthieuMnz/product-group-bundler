@@ -341,7 +341,7 @@ Replace the demo metafield/metaobject definitions with the bundle configuration:
 
 client_id = "2aeef01e716df073d7052a92bfcf8ab6"
 name = "product-group-bundler"
-application_url = "https://example.com"
+application_url = "https://bundler.icarsoft-france.fr"
 embedded = true
 
 [build]
@@ -363,7 +363,7 @@ api_version = "2026-04"
 scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://bundler.icarsoft-france.fr/api/auth" ]
 
 # ─── Bundle Groups Metafield ──────────────────────────────────
 
