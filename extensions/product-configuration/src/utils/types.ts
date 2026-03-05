@@ -1,4 +1,5 @@
 export type {
+  VariantInfo,
   BundleProduct,
   BundleGroup,
   BundleConfig,

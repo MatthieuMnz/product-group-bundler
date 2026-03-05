@@ -1,130 +1,96 @@
-import {
-  reactExtension,
-  useApi,
-  AdminBlock,
-  BlockStack,
-  Button,
-  InlineStack,
-  Text,
-  Badge,
-  ProgressIndicator,
-  Box,
-  Image,
-} from '@shopify/ui-extensions-react/admin';
+import '@shopify/ui-extensions/preact';
+import { render } from 'preact';
 import { useBundleConfig } from './hooks/useBundleConfig';
 
-const TARGET = 'admin.product-details.block.render';
-
-export default reactExtension(TARGET, () => <App />);
+export default function extension() {
+  render(<App />, document.body);
+}
 
 function App() {
-  const api = useApi();
-  const { data, i18n, navigation } = api as Record<string, any>;
-  const productId = (data as Record<string, any>)?.selected?.[0]?.id || "gid://shopify/Product/0";
+  const productId = (shopify as any).data?.selected?.[0]?.id || "gid://shopify/Product/0";
+  const t = (key: string) => shopify.i18n.translate(key);
 
-  const { config, isLoading } = useBundleConfig(productId);
-
-  if (isLoading) {
-    return (
-      <AdminBlock title={i18n.translate('blockTitle')}>
-        <BlockStack gap="base">
-          <ProgressIndicator size="base" />
-        </BlockStack>
-      </AdminBlock>
-    );
-  }
+  const { config, isLoading, isResolving } = useBundleConfig(productId);
 
   const handleManage = () => {
-    // Navigate to the action extension using the defined handle in shopify.extension.toml
-    navigation.navigate('extension://bundle-config-action');
+    (shopify as any).navigation.navigate('extension://bundle-config-action');
   };
 
   const groupCount = config?.groups.length || 0;
   const productCount = config?.groups.reduce((acc, g) => acc + g.products.length, 0) || 0;
 
+  if (isLoading) {
+    return (
+      <s-admin-block heading={t('blockTitle')}>
+        <s-stack gap="base" alignItems="center">
+          <s-spinner size="base"></s-spinner>
+        </s-stack>
+      </s-admin-block>
+    );
+  }
+
   return (
-    <AdminBlock title={i18n.translate('blockTitle')}>
-      <BlockStack gap="base">
-        {/* Top-level summary */}
-        <Box padding="base" paddingBlock="small">
-          <InlineStack blockAlignment="center" inlineAlignment="space-between">
-            <BlockStack gap="small">
-              <InlineStack gap="small" blockAlignment="center">
-                <Text fontWeight="bold">{groupCount}</Text>
-                <Text>
-                  {groupCount === 1 ? i18n.translate('name') : i18n.translate('blockTitle')}
-                </Text>
-              </InlineStack>
-              <Text>
-                {productCount} {productCount === 1 ? i18n.translate('product') : i18n.translate('products')}
-              </Text>
-            </BlockStack>
-            
-            <Button onClick={handleManage}>
-              {i18n.translate('manageBundles')}
-            </Button>
-          </InlineStack>
-        </Box>
-        
-        {/* Detailed group previews */}
-        {groupCount > 0 && (
-          <BlockStack gap="base">
-            {config?.groups.slice(0, 2).map((group) => (
-              <Box 
-                key={group.id} 
-                padding="base"
-              >
-                
-                <BlockStack gap="small">
-                  <InlineStack blockAlignment="center" inlineAlignment="space-between">
-                    <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
-                    <Badge tone="info">{group.products.length}</Badge>
-                  </InlineStack>
-                  
-                  {/* Product thumbnails container */}
-                  <InlineStack gap="base" blockAlignment="center">
-                    {group.products.slice(0, 3).map((product, pIdx) => (
-                      <Box 
-                        key={`${group.id}-p-${pIdx}`} 
-                        minBlockSize={44}
-                        minInlineSize={44}
-                        maxBlockSize={64}
-                        maxInlineSize={64}
-                      >
-                        {(product as Record<string, any>)._imageUrl ? (
-                          <Image
-                            source={(product as Record<string, any>)._imageUrl}
-                            alt={(product as Record<string, any>).title || ''}
-                          />
-                        ) : (
-                          /* Fallback placeholder */
-                          <Box 
-                            padding="base" 
-                            minBlockSize={44} 
-                            minInlineSize={44}
-                          />
-                        )}
-                      </Box>
-                    ))}
-                    
-                    {group.products.length > 3 && (
-                      <Badge tone="info">+{group.products.length - 3}</Badge>
-                    )}
-                  </InlineStack>
-                </BlockStack>
-              </Box>
-            ))}
-            
-            {groupCount > 2 && (
-              <Box paddingBlockStart="base">
-                <Text>
-                  +{groupCount - 2} more groups
-                </Text>
-              </Box>
-            )}
-          </BlockStack>
+    <s-admin-block heading={t('blockTitle')}>
+      <s-stack gap="base">
+        {/* Summary row */}
+        <s-section>
+          <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+            <s-stack direction="inline" gap="base" alignItems="center">
+              <s-badge tone="info" icon="collection">
+                {groupCount} {groupCount === 1 ? t('group') : t('groups')}
+              </s-badge>
+              <s-badge icon="product">
+                {productCount} {productCount === 1 ? t('product') : t('products')}
+              </s-badge>
+            </s-stack>
+            <s-button onClick={handleManage}>{t('manageBundles')}</s-button>
+          </s-stack>
+        </s-section>
+
+        {isResolving && (
+          <s-stack direction="inline" gap="small" alignItems="center">
+            <s-spinner size="base"></s-spinner>
+            <s-text color="subdued">{t('resolvingProducts')}</s-text>
+          </s-stack>
         )}
-      </BlockStack>
-    </AdminBlock>
+
+        {/* Group previews */}
+        {groupCount > 0 && (
+          <s-stack gap="base">
+            {config?.groups.slice(0, 2).map((group) => (
+              <s-section key={group.id} heading={group.name || t('unnamedGroup')}>
+                <s-stack gap="small">
+                  <s-badge tone="info" icon="product">
+                    {group.products.length} {group.products.length === 1 ? t('product') : t('products')}
+                  </s-badge>
+
+                  <s-stack direction="inline" gap="base" alignItems="center">
+                    {group.products.slice(0, 3).map((product, pIdx) => (
+                      <s-thumbnail
+                        key={`${group.id}-p-${pIdx}`}
+                        src={(product as any)._imageUrl || ''}
+                        alt={product.title || ''}
+                        size="small"
+                      ></s-thumbnail>
+                    ))}
+                    {group.products.length > 3 && (
+                      <s-badge tone="info">+{group.products.length - 3}</s-badge>
+                    )}
+                  </s-stack>
+                </s-stack>
+              </s-section>
+            ))}
+
+            {groupCount > 2 && (
+              <s-box paddingBlockStart="base">
+                <s-text color="subdued">
+                  +{groupCount - 2} {t('moreGroups')}
+                </s-text>
+              </s-box>
+            )}
+          </s-stack>
+        )}
+      </s-stack>
+    </s-admin-block>
   );
 }
