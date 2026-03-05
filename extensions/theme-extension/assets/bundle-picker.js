@@ -20,28 +20,35 @@ class PgbBundlePicker extends HTMLElement {
             const currencySymbol = this.getAttribute('data-currency-symbol') || '$';
             const customHeading = this.getAttribute('data-heading') || 'Bundle';
 
-            // Show skeleton while loading
-            this.renderSkeleton(config, customHeading);
+            // Render immediately with embedded config data (no network needed)
+            this.renderGroups(config, {}, locale, currencySymbol, customHeading, mainProductGid);
+            this.interceptAddToCart();
 
-            // Fetch product details via AJAX
+            // Enhance with AJAX data (variant details, availability) in background
+            const rootUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
             const productData = {};
+            let fetched = false;
             for (const group of config.groups) {
                 for (const product of group.products) {
                     if (product.handle && !productData[product.handle]) {
                         try {
-                            const res = await fetch(`/products/${product.handle}.js`);
+                            const url = rootUrl + (rootUrl.endsWith('/') ? '' : '/') + 'products/' + product.handle + '.js';
+                            const res = await fetch(url);
                             if (res.ok) {
                                 productData[product.handle] = await res.json();
+                                fetched = true;
                             }
                         } catch (e) {
-                            console.error("Failed to fetch product:", product.handle, e);
+                            // AJAX fetch failed — config data is used as fallback
                         }
                     }
                 }
             }
 
-            this.renderGroups(config, productData, locale, currencySymbol, customHeading, mainProductGid);
-            this.interceptAddToCart();
+            // Re-render with enriched data if any fetches succeeded
+            if (fetched) {
+                this.renderGroups(config, productData, locale, currencySymbol, customHeading, mainProductGid);
+            }
         } catch (err) {
             console.error("Bundle picker error:", err);
             this.innerHTML = `<p style="color:red;">Error loading bundles.</p>`;
@@ -93,62 +100,75 @@ class PgbBundlePicker extends HTMLElement {
 
             group.products.forEach(prod => {
                 const data = productData[prod.handle];
-                // If product doesn't exist or has no variants, skip rendering
-                if (!data || !data.variants || data.variants.length === 0) return;
+                const hasAjaxData = data && data.variants && data.variants.length > 0;
 
                 // Determine which variants are allowed
-                let allowedVariants = data.variants;
-                if (prod.variantIds && prod.variantIds.length > 0) {
-                    allowedVariants = data.variants.filter(v => {
-                        const variantGid = `gid://shopify/ProductVariant/${v.id}`;
-                        return prod.variantIds.includes(variantGid) || prod.variantIds.includes(String(v.id));
-                    });
-                    if (allowedVariants.length === 0) allowedVariants = data.variants;
+                let allowedVariants = [];
+                let defaultVariant = null;
+                let isEntirelyOutOfStock = false;
+                let hasMultipleVariants = false;
+
+                if (hasAjaxData) {
+                    allowedVariants = data.variants;
+                    if (prod.variantIds && prod.variantIds.length > 0) {
+                        allowedVariants = data.variants.filter(v => {
+                            const variantGid = `gid://shopify/ProductVariant/${v.id}`;
+                            return prod.variantIds.includes(variantGid) || prod.variantIds.includes(String(v.id));
+                        });
+                        if (allowedVariants.length === 0) allowedVariants = data.variants;
+                    }
+                    const availableVariants = allowedVariants.filter(v => v.available);
+                    isEntirelyOutOfStock = availableVariants.length === 0;
+                    defaultVariant = availableVariants.length > 0 ? availableVariants[0] : allowedVariants[0];
+                    hasMultipleVariants = allowedVariants.length > 1;
                 }
 
-                // Check availability
-                const availableVariants = allowedVariants.filter(v => v.available);
-                const isEntirelyOutOfStock = availableVariants.length === 0;
+                // Resolve display values: prefer AJAX data, fall back to config-embedded data
+                const productTitle = hasAjaxData ? data.title : (prod.title || prod.handle);
+                const origPrice = hasAjaxData
+                    ? (defaultVariant.price / 100).toFixed(2)
+                    : (prod._price || '0.00');
+                const discount = prod.discountValue || 0;
+                const newPrice = Math.max(0, parseFloat(origPrice) - discount).toFixed(2);
 
-                // Default to the first *available* variant if possible, otherwise just the first
-                const defaultVariant = availableVariants.length > 0 ? availableVariants[0] : allowedVariants[0];
+                // Resolve image: prefer AJAX data, fall back to config snapshot
+                let imageUrl = '';
+                if (hasAjaxData) {
+                    imageUrl = data.featured_image || '';
+                    if (allowedVariants.length === 1 && allowedVariants[0].featured_image) {
+                        imageUrl = allowedVariants[0].featured_image.src || imageUrl;
+                    } else if (data.images && data.images.length > 0) {
+                        imageUrl = data.images[0] || imageUrl;
+                    }
+                    if (imageUrl && !imageUrl.includes('width=') && !imageUrl.includes('_100x')) {
+                        imageUrl = imageUrl.replace(/(\.[a-z0-9]+)$/i, '_100x$1');
+                    }
+                } else {
+                    imageUrl = prod._imageUrl || '';
+                }
 
-                const origPrice = (defaultVariant.price / 100).toFixed(2);
-                const newPrice = Math.max(0, origPrice - prod.discountValue).toFixed(2);
-                const hasMultipleVariants = allowedVariants.length > 1;
+                // Resolve variant ID for the checkbox
+                const variantId = defaultVariant ? defaultVariant.id : '';
 
                 const cardClass = isEntirelyOutOfStock ? 'pgb-product-card pgb-product-card--unavailable' : 'pgb-product-card';
                 const disabledAttr = isEntirelyOutOfStock ? 'disabled' : '';
-
-                // Get the best image (variant image if available and variants restricted, else product image)
-                let imageUrl = data.featured_image || '';
-                if (allowedVariants.length === 1 && allowedVariants[0].featured_image) {
-                    imageUrl = allowedVariants[0].featured_image.src || imageUrl;
-                } else if (data.images && data.images.length > 0) {
-                    imageUrl = data.images[0] || imageUrl;
-                }
-
-                // Add Shopify image sizing parameter
-                if (imageUrl && !imageUrl.includes('width=')) {
-                    imageUrl = imageUrl.replace(/(\.[a-z0-9]+)$/i, '_100x$1');
-                }
 
                 html += `
         <label class="${cardClass}">
           <input type="checkbox" class="pgb-checkbox" 
                  data-group-id="${group.id}" 
                  data-product-id="${prod.productId}" 
-                 data-variant-id="${defaultVariant.id}" 
+                 data-variant-id="${variantId}" 
                  data-parent-product-gid="${mainProductGid}"
-                 data-discount="${prod.discountValue}"
+                 data-discount="${discount}"
                  ${disabledAttr} />
 `;
                 if (imageUrl) {
-                    html += `<img src="${imageUrl}" alt="${data.title}" class="pgb-product-image" loading="lazy">`;
+                    html += `<img src="${imageUrl}" alt="${productTitle}" class="pgb-product-image" loading="lazy">`;
                 }
                 html += `
           <div class="pgb-product-info">
-            <span class="pgb-product-title">${data.title}</span>
+            <span class="pgb-product-title">${productTitle}</span>
             <span class="pgb-product-price">
               <span class="pgb-old-price">${currencySymbol}${origPrice}</span>
               <span class="pgb-new-price">${currencySymbol}${newPrice}</span>
@@ -158,7 +178,7 @@ class PgbBundlePicker extends HTMLElement {
                     html += `<span class="pgb-out-of-stock-badge">${tOutOfStock}</span>`;
                 }
 
-                // Variant selector for multi-variant products
+                // Variant selector (only when AJAX data provides variant details)
                 if (hasMultipleVariants && !isEntirelyOutOfStock) {
                     html += `
             <select class="pgb-variant-selector" data-product-handle="${prod.handle}" data-discount="${prod.discountValue}" data-currency="${currencySymbol}">`;
@@ -254,6 +274,7 @@ class PgbBundlePicker extends HTMLElement {
                     items.push({
                         id: parseInt(vid, 10),
                         quantity: 1,
+                        parent_id: parseInt(mainVariantId, 10),
                         properties: {
                             "_bundle_parent_product_id": pgid,
                             "_bundle_group_id": gid
