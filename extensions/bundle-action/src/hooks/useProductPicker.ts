@@ -21,50 +21,12 @@ type QueryFn = <T = unknown>(
 ) => Promise<GraphqlResponse<T>>;
 
 export function useProductPicker() {
-  const pickProducts = useCallback(async (selectedIds: string[] = []): Promise<PickedProduct[]> => {
-    try {
-      if (typeof shopify.resourcePicker !== 'function') {
-        return [];
-      }
-
-      const selected = await (shopify.resourcePicker as any)({
-        type: 'product',
-        multiple: true,
-        action: 'select',
-        selectionIds: selectedIds.map(id => ({ id })),
-        filter: {
-          draft: false,
-          archived: false,
-        },
-      });
-
-      if (!selected || selected.length === 0) return [];
-
-      const productIds = selected.map((p: any) => p.id);
-      const productMeta = await fetchProductMeta(shopify.query.bind(shopify), productIds);
-
-      return selected.map((product: any) => {
-        const meta = productMeta.get(product.id);
-        return {
-          id: product.id,
-          title: product.title,
-          handle: product.handle,
-          variants: meta?.variants || [],
-          imageUrl: meta?.imageUrl || undefined,
-        };
-      });
-    } catch (e) {
-      console.error('Product picker error:', e);
-      return [];
-    }
-  }, []);
-
   interface ProductMetaResult {
     variants: PickedVariant[];
     imageUrl?: string;
   }
 
-  const fetchProductMeta = async (
+  const fetchProductMeta = useCallback(async (
     queryFn: QueryFn,
     productIds: string[]
   ): Promise<Map<string, ProductMetaResult>> => {
@@ -122,7 +84,45 @@ export function useProductPicker() {
       console.error('Failed to fetch product meta:', e);
     }
     return map;
-  };
+  }, []);
+
+  const pickProducts = useCallback(async (selectedIds: string[] = []): Promise<PickedProduct[]> => {
+    try {
+      if (typeof shopify.resourcePicker !== 'function') {
+        return [];
+      }
+
+      const selected = await (shopify.resourcePicker as any)({
+        type: 'product',
+        multiple: true,
+        action: 'select',
+        selectionIds: selectedIds.map(id => ({ id })),
+        filter: {
+          draft: false,
+          archived: false,
+        },
+      });
+
+      if (!selected || selected.length === 0) return [];
+
+      const productIds = selected.map((p: any) => p.id);
+      const productMeta = await fetchProductMeta(shopify.query.bind(shopify), productIds);
+
+      return selected.map((product: any) => {
+        const meta = productMeta.get(product.id);
+        return {
+          id: product.id,
+          title: product.title,
+          handle: product.handle,
+          variants: meta?.variants || [],
+          imageUrl: meta?.imageUrl || undefined,
+        };
+      });
+    } catch (e) {
+      console.error('Product picker error:', e);
+      return [];
+    }
+  }, [fetchProductMeta]);
 
   const fetchVariantsForProducts = async (
     queryFn: QueryFn,
