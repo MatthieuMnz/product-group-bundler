@@ -21,7 +21,7 @@
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
-    "typecheck": "react-router typegen && tsc --noEmit"
+    "typecheck": "DATABASE_URL=${DATABASE_URL:-file:./dev.sqlite} pnpm exec prisma generate && react-router typegen && tsc --noEmit"
   },
   "type": "module",
   "engines": {
