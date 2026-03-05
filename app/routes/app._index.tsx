@@ -102,8 +102,6 @@ import {
   Button,
   Banner,
   List,
-  InlineStack,
-  Icon,
   Box,
 } from "@shopify/polaris";
 import { PlusIcon, CheckCircleIcon, AlertTriangleIcon } from "@shopify/polaris-icons";

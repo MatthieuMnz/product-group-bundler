@@ -46,10 +46,13 @@ export function useBundleConfig(productId: string) {
         ...newConfig,
         groups: newConfig.groups.map(g => ({
           ...g,
-          products: g.products.map(p => {
-            const { _variants, ...rest } = p as any;
-            return rest as BundleProduct;
-          }),
+            products: g.products.map(p => {
+              const productToSave: BundleProduct = { ...p };
+              delete productToSave._variants;
+              delete productToSave._imageUrl;
+              delete productToSave._price;
+              return productToSave;
+            }),
         })),
       };
       const res = await query<any>(`

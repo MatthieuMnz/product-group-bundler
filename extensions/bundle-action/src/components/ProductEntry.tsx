@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { BlockStack, Box, Button, Checkbox, Image, InlineStack, Text, NumberField, Divider, useApi } from '@shopify/ui-extensions-react/admin';
+import { BlockStack, Box, Button, Checkbox, Image, InlineStack, Text, NumberField, useApi } from '@shopify/ui-extensions-react/admin';
 import { BundleProduct } from '../utils/types';
 import { useState } from 'react';
 
