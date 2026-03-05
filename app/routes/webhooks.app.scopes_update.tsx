@@ -6,14 +6,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { payload, session, topic, shop } = await authenticate.webhook(request);
     console.log(`Received ${topic} webhook for ${shop}`);
 
-    const current = payload.current as string[];
-    if (session) {
-        await db.session.update({   
-            where: {
-                id: session.id
-            },
+    const current = Array.isArray(payload.current) ? payload.current : [];
+    if (session || shop) {
+        await db.session.updateMany({
+            where: { shop },
             data: {
-                scope: current.toString(),
+                scope: current.join(","),
             },
         });
     }

@@ -40,7 +40,7 @@ A Shopify app with three extensions working together:
 
 | Layer | Extension | Role |
 |-------|-----------|------|
-| **Admin** | Product Configuration Extension | Merchant configures bundle groups directly in the "Bundled products" card on the product page |
+| **Admin** | Product Configuration Block + Bundle Configuration Action | Merchant manages bundle groups from a product card summary that opens a full-screen editor action |
 | **Storefront** | Theme App Extension (Liquid + JS) | Displays the bundle group picker on the product page; hooks into add-to-cart |
 | **Cart** | Cart Transform Function (Shopify Function) | Validates and applies bundle discounts server-side at cart/checkout time |
 
@@ -392,9 +392,13 @@ description = "Configuration for product bundle groups (accessories, tools, etc.
 
 ### 5.1 Product Configuration Extension
 
-**Target:** `admin.product-details.configuration.render` (or standard product config target)
-**Purpose:** Let the merchant configure bundle groups directly on a product page inside the "Bundled products" card in Shopify Admin.
+**Target:** `admin.product-details.block.render`
+**Purpose:** Show bundle summary and entry point on product page.
 **Tech:** React + Shopify Admin UI Extensions API + Polaris admin components
+
+> **Current repo implementation:** The admin flow is split into two extensions:
+> - `product-configuration` (`bundle-group-manager`) for the product-details block summary
+> - `bundle-action` (`bundle-config-action`) for full bundle editing in `admin.product-details.action.render`
 
 #### Generation Command
 
@@ -1179,49 +1183,37 @@ product-group-bundler/
 │
 ├── extensions/
 │   │
-│   ├── bundle-group-manager/                 # ── Product Config Extension ──
-│   │   ├── src/
-│   │   │   ├── BlockExtension.tsx            # Main React component
-│   │   │   ├── components/
-│   │   │   │   ├── GroupCard.tsx              # Single group editor
-│   │   │   │   ├── ProductEntry.tsx           # Product row with discount config
-│   │   │   │   └── EmptyState.tsx             # No groups placeholder
-│   │   │   ├── hooks/
-│   │   │   │   ├── useBundleConfig.ts         # Load/save metafield
-│   │   │   │   └── useProductPicker.ts        # Resource picker integration
-│   │   │   └── utils/
-│   │   │       ├── types.ts                   # TypeScript interfaces
-│   │   │       └── validation.ts              # Config validation
-│   │   ├── locales/
-│   │   │   ├── en.default.json
-│   │   │   └── fr.json
-│   │   ├── package.json
-│   │   ├── tsconfig.json
+│   ├── product-configuration/                # Admin block summary extension
+│   │   ├── src/BlockExtension.tsx
+│   │   ├── src/hooks/useBundleConfig.ts
 │   │   └── shopify.extension.toml
 │   │
-│   ├── bundle-picker/                        # ── Theme App Extension ──
-│   │   ├── assets/
-│   │   │   ├── bundle-picker.js              # Interactive UI + add-to-cart logic
-│   │   │   └── bundle-picker.css             # Scoped styles
-│   │   ├── blocks/
-│   │   │   └── bundle-picker.liquid           # App block for product page
-│   │   ├── snippets/
-│   │   │   └── bundle-product-card.liquid     # Reusable product card snippet
-│   │   ├── locales/
-│   │   │   ├── en.default.json
-│   │   │   └── fr.json
+│   ├── bundle-action/                        # Admin full editor action extension
+│   │   ├── src/ActionExtension.tsx
+│   │   ├── src/components/
+│   │   ├── src/hooks/
+│   │   ├── src/utils/
 │   │   └── shopify.extension.toml
 │   │
-│   └── bundle-discount/                      # ── Cart Transform Function ──
-│       ├── src/
-│       │   ├── run.ts                         # Function entry point
-│       │   └── types.ts                       # Shared bundle config types
-│       ├── input.graphql                      # Function input query
-│       ├── generated/                         # Auto-generated types from input query
-│       │   └── api.ts
-│       ├── package.json
-│       ├── tsconfig.json
+│   ├── theme-extension/                      # Theme app extension (bundle picker)
+│   │   ├── assets/bundle-picker.js
+│   │   ├── assets/bundle-picker.css
+│   │   ├── blocks/bundle-picker.liquid
+│   │   └── shopify.extension.toml
+│   │
+│   └── cart-transformer/                     # Cart Transform function extension
+│       ├── src/run.ts
+│       ├── src/input.graphql
+│       ├── src/run.test.ts
+│       ├── generated/api.ts
 │       └── shopify.extension.toml
+│
+├── shared/
+│   └── bundle-domain.ts                      # Shared bundle contract + parsing + validation
+│
+├── tests/
+│   ├── shared/bundle-domain.test.ts
+│   └── theme/bundle-picker.test.ts
 │
 ├── prisma/
 │   └── schema.prisma                         # Session model only
@@ -1348,6 +1340,14 @@ product-group-bundler/
 | 3.7 | Cross-sell: "Customers also bundled…" recommendations |
 | 3.8 | Alternative discount mechanism for non-Plus stores (Discount Function) |
 
+### Definition Of Done (All Future Tasks)
+
+- Code is merged only if `pnpm run check` passes.
+- Bundle contract changes update `shared/bundle-domain.ts` and related tests.
+- Any new storefront add-to-cart behavior includes payload-level test coverage.
+- Any Cart Transform logic change includes unit tests for malformed input and edge paths.
+- Documentation update is required when extension topology or commands change.
+
 ---
 
 ## 13. Testing Strategy
@@ -1404,6 +1404,8 @@ product-group-bundler/
 | Config extension component tests | `@shopify/ui-extensions-test-utils` | Component rendering and interactions |
 | Theme block JS tests | Vitest | Selection logic, payload building |
 | E2E tests | (Future) Playwright | Full add-to-cart flow on dev store |
+
+Current quality gate command: `pnpm run check` (lint + typecheck + root tests + extension tests), enforced in CI.
 
 ---
 

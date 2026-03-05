@@ -1,6 +1,85 @@
+function isRecord(value) {
+    return typeof value === 'object' && value !== null;
+}
+
+function toFiniteNumber(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function normalizeBundleConfig(rawConfig) {
+    if (!isRecord(rawConfig) || !Array.isArray(rawConfig.groups)) {
+        return null;
+    }
+
+    const groups = rawConfig.groups
+        .filter((group) => isRecord(group))
+        .map((group) => {
+            const products = Array.isArray(group.products) ? group.products : [];
+            return {
+                id: typeof group.id === 'string' ? group.id : '',
+                name: typeof group.name === 'string' ? group.name : 'Bundle Group',
+                products: products
+                    .filter((product) => isRecord(product))
+                    .map((product) => {
+                        const variantIds = Array.isArray(product.variantIds)
+                            ? product.variantIds.filter((id) => typeof id === 'string' && id.length > 0)
+                            : [];
+                        const variantDiscounts = Array.isArray(product.variantDiscounts)
+                            ? product.variantDiscounts
+                                .filter((discount) => isRecord(discount) && typeof discount.id === 'string')
+                                .map((discount) => ({
+                                    id: discount.id,
+                                    discountValue: toFiniteNumber(discount.discountValue, 0),
+                                }))
+                            : [];
+
+                        return {
+                            productId: typeof product.productId === 'string' ? product.productId : '',
+                            handle: typeof product.handle === 'string' ? product.handle : '',
+                            title: typeof product.title === 'string' ? product.title : '',
+                            _price: typeof product._price === 'string' ? product._price : '0.00',
+                            _imageUrl: typeof product._imageUrl === 'string' ? product._imageUrl : '',
+                            discountValue: toFiniteNumber(product.discountValue, 0),
+                            variantIds,
+                            variantDiscounts,
+                        };
+                    })
+                    .filter((product) => product.productId.length > 0),
+            };
+        })
+        .filter((group) => group.id.length > 0 && group.products.length > 0);
+
+    if (groups.length === 0) {
+        return null;
+    }
+
+    return {
+        version: toFiniteNumber(rawConfig.version, 1),
+        groups,
+    };
+}
+
+function buildRootUrl() {
+    return (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
+}
+
 class PgbBundlePicker extends HTMLElement {
     constructor() {
         super();
+        this.bundleConfig = null;
+        this.boundForm = null;
+        this.submitHandler = null;
+        this.errorMessage = '';
     }
 
     connectedCallback() {
@@ -9,49 +88,69 @@ class PgbBundlePicker extends HTMLElement {
         this.init();
     }
 
+    disconnectedCallback() {
+        if (this.boundForm && this.submitHandler) {
+            this.boundForm.removeEventListener('submit', this.submitHandler, true);
+        }
+        this.boundForm = null;
+        this.submitHandler = null;
+    }
+
+    setError(message) {
+        this.errorMessage = message || '';
+        const host = this.querySelector('.pgb-error-message');
+        if (host) {
+            host.textContent = this.errorMessage;
+            host.hidden = !this.errorMessage;
+        }
+    }
+
     async init() {
         const rawConfig = this.getAttribute('data-bundle-config');
         if (!rawConfig) return;
 
         try {
-            const config = JSON.parse(rawConfig);
-            const mainProductGid = this.getAttribute('data-product-gid');
+            const parsedConfig = JSON.parse(rawConfig);
+            const config = normalizeBundleConfig(parsedConfig);
+            if (!config) return;
+
+            this.bundleConfig = config;
+            const mainProductGid = this.getAttribute('data-product-gid') || '';
             const locale = this.getAttribute('data-locale') || 'en';
             const currencySymbol = this.getAttribute('data-currency-symbol') || '$';
             const customHeading = this.getAttribute('data-heading') || 'Bundle';
 
-            // Render immediately with embedded config data (no network needed)
+            this.renderSkeleton(config, customHeading);
             this.renderGroups(config, {}, locale, currencySymbol, customHeading, mainProductGid);
             this.interceptAddToCart();
 
-            // Enhance with AJAX data (variant details, availability) in background
-            const rootUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
             const productData = {};
-            let fetched = false;
+            const rootUrl = buildRootUrl();
+            const fetchTasks = [];
             for (const group of config.groups) {
                 for (const product of group.products) {
-                    if (product.handle && !productData[product.handle]) {
-                        try {
-                            const url = rootUrl + (rootUrl.endsWith('/') ? '' : '/') + 'products/' + product.handle + '.js';
-                            const res = await fetch(url);
-                            if (res.ok) {
-                                productData[product.handle] = await res.json();
-                                fetched = true;
-                            }
-                        } catch (e) {
-                            // AJAX fetch failed — config data is used as fallback
-                        }
-                    }
+                    if (!product.handle || productData[product.handle]) continue;
+                    const url = rootUrl + (rootUrl.endsWith('/') ? '' : '/') + 'products/' + product.handle + '.js';
+                    fetchTasks.push(
+                        fetch(url)
+                            .then((res) => (res.ok ? res.json() : null))
+                            .then((json) => {
+                                if (json) {
+                                    productData[product.handle] = json;
+                                }
+                            })
+                            .catch(() => null)
+                    );
                 }
             }
 
-            // Re-render with enriched data if any fetches succeeded
-            if (fetched) {
+            if (fetchTasks.length > 0) {
+                await Promise.all(fetchTasks);
                 this.renderGroups(config, productData, locale, currencySymbol, customHeading, mainProductGid);
             }
         } catch (err) {
-            console.error("Bundle picker error:", err);
-            this.innerHTML = `<p style="color:red;">Error loading bundles.</p>`;
+            console.error('Bundle picker error:', err);
+            this.innerHTML = '<p class="pgb-error-message">Error loading bundles.</p>';
         }
     }
 
@@ -59,7 +158,7 @@ class PgbBundlePicker extends HTMLElement {
         const groupCount = config.groups ? config.groups.length : 1;
         let html = '';
         if (heading) {
-            html += `<h4>${heading}</h4>`;
+            html += `<h4>${escapeHtml(heading)}</h4>`;
         }
         html += '<div class="pgb-groups-wrapper">';
         for (let g = 0; g < groupCount; g++) {
@@ -84,8 +183,10 @@ class PgbBundlePicker extends HTMLElement {
     renderGroups(config, productData, locale, currencySymbol, customHeading, mainProductGid) {
         let html = ``;
         if (customHeading) {
-            html += `<h4>${customHeading}</h4>`;
+            html += `<h4>${escapeHtml(customHeading)}</h4>`;
         }
+
+        html += `<p class="pgb-error-message"${this.errorMessage ? '' : ' hidden'}>${escapeHtml(this.errorMessage)}</p>`;
 
         // Try to get translations from a hidden element if provided by the theme, otherwise fallback
         const tOutOfStock = window.pgbTranslations?.outOfStock || 'Out of stock';
@@ -95,7 +196,7 @@ class PgbBundlePicker extends HTMLElement {
         config.groups.forEach((group) => {
             const title = group.name || 'Bundle Group';
             html += `<div class="pgb-group" data-group-id="${group.id}">
-      <h3 class="pgb-group-title">${title}</h3>
+      <h3 class="pgb-group-title">${escapeHtml(title)}</h3>
       <div class="pgb-group-items">`;
 
             group.products.forEach(prod => {
@@ -125,19 +226,19 @@ class PgbBundlePicker extends HTMLElement {
 
                 // Resolve display values: prefer AJAX data, fall back to config-embedded data
                 const productTitle = hasAjaxData ? data.title : (prod.title || prod.handle);
-                let discount = prod.discountValue || 0;
+                let discount = toFiniteNumber(prod.discountValue, 0);
 
                 // If there's a variant-specific discount for the default variant, use it initially
                 if (defaultVariant && Array.isArray(prod.variantDiscounts)) {
                     const vd = prod.variantDiscounts.find(v => v.id === `gid://shopify/ProductVariant/${defaultVariant.id}` || v.id === String(defaultVariant.id));
                     if (vd) {
-                        discount = vd.discountValue;
+                        discount = toFiniteNumber(vd.discountValue, discount);
                     }
                 }
 
                 const origPrice = hasAjaxData
-                    ? (defaultVariant.price / 100).toFixed(2)
-                    : (prod._price || '0.00');
+                    ? (toFiniteNumber(defaultVariant.price, 0) / 100).toFixed(2)
+                    : String(prod._price || '0.00');
                 const newPrice = Math.max(0, parseFloat(origPrice) - discount).toFixed(2);
 
                 // Resolve image: prefer AJAX data, fall back to config snapshot
@@ -173,11 +274,11 @@ class PgbBundlePicker extends HTMLElement {
                  ${disabledAttr} />
 `;
                 if (imageUrl) {
-                    html += `<img src="${imageUrl}" alt="${productTitle}" class="pgb-product-image" loading="lazy">`;
+                    html += `<img src="${imageUrl}" alt="${escapeHtml(productTitle)}" class="pgb-product-image" loading="lazy">`;
                 }
                 html += `
           <div class="pgb-product-info">
-            <span class="pgb-product-title">${productTitle}</span>
+            <span class="pgb-product-title">${escapeHtml(productTitle)}</span>
             <span class="pgb-product-price">
               <span class="pgb-old-price">${currencySymbol}${origPrice}</span>
               <span class="pgb-new-price">${currencySymbol}${newPrice}</span>
@@ -197,8 +298,8 @@ class PgbBundlePicker extends HTMLElement {
                     allowedVariants.forEach((v) => {
                         const vDisabled = !v.available ? ' disabled' : '';
                         const vSelected = v.id === defaultVariant.id ? ' selected' : '';
-                        const vLabel = v.title + (v.available ? ` — ${currencySymbol}${(v.price / 100).toFixed(2)}` : ` (${tOutOfStock})`);
-                        html += `<option value="${v.id}" data-price="${v.price}"${vDisabled}${vSelected}>${vLabel}</option>`;
+                        const vLabel = v.title + (v.available ? ` — ${currencySymbol}${(toFiniteNumber(v.price, 0) / 100).toFixed(2)}` : ` (${tOutOfStock})`);
+                        html += `<option value="${v.id}" data-price="${v.price}"${vDisabled}${vSelected}>${escapeHtml(vLabel)}</option>`;
                     });
                     html += `</select>`;
                 }
@@ -225,10 +326,15 @@ class PgbBundlePicker extends HTMLElement {
                 const variantPrice = parseFloat(selectedOption.dataset.price) / 100;
 
                 let discount = parseFloat(sel.dataset.baseDiscount) || 0;
-                const variantDiscounts = JSON.parse(sel.dataset.variantDiscounts || '[]');
+                let variantDiscounts = [];
+                try {
+                    variantDiscounts = JSON.parse(sel.dataset.variantDiscounts || '[]');
+                } catch {
+                    variantDiscounts = [];
+                }
                 const vd = variantDiscounts.find(v => v.id === `gid://shopify/ProductVariant/${sel.value}` || v.id === sel.value);
                 if (vd) {
-                    discount = vd.discountValue;
+                    discount = toFiniteNumber(vd.discountValue, discount);
                 }
 
                 const currency = sel.dataset.currency || '$';
@@ -247,101 +353,91 @@ class PgbBundlePicker extends HTMLElement {
     }
 
     interceptAddToCart() {
-        if (window._pgbIntercepted) return;
-        window._pgbIntercepted = true;
+        if (this.submitHandler) return;
 
-        window.addEventListener('submit', async (e) => {
-            const form = e.target;
-            if (!form || form.tagName !== 'FORM') return;
+        const form =
+            this.closest('form') ||
+            document.querySelector('form[data-product-form]') ||
+            document.querySelector('form[action*="/cart/add"]');
+        if (!form) return;
 
-            const action = form.getAttribute('action') || '';
-            if (!action.includes('/cart/add')) return;
+        this.boundForm = form;
+        this.submitHandler = async (e) => {
+            const currentForm = e.target;
+            if (currentForm !== this.boundForm) return;
 
-            const checkedBoxes = document.querySelectorAll('.pgb-checkbox:checked');
-            if (checkedBoxes.length === 0) return; // No bundles selected, let it submit normally
+            const checkedBoxes = this.querySelectorAll('.pgb-checkbox:checked');
+            if (checkedBoxes.length === 0) return;
 
-            const formData = new FormData(form);
-            const mainVariantId = formData.get('id');
-            const mainQty = formData.get('quantity') || 1;
+            const formData = new FormData(this.boundForm);
+            const mainVariantIdRaw = formData.get('id');
+            const mainQtyRaw = formData.get('quantity') || 1;
+            const mainVariantId = Number.parseInt(String(mainVariantIdRaw || ''), 10);
+            const mainQty = Number.parseInt(String(mainQtyRaw), 10) || 1;
 
-            if (!mainVariantId) {
-                console.error("PGB: No variant ID found in form. Cannot add bundle.");
-                return; // Let the form submit normally
+            if (!Number.isFinite(mainVariantId) || mainVariantId <= 0) {
+                console.error('PGB: missing or invalid main variant ID');
+                return;
             }
 
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            console.log("PGB: Intercepting add to cart for bundle items...");
+            this.setError('');
 
-            const submitBtn = form.querySelector('[type="submit"], button');
+            const submitBtn = this.boundForm.querySelector('[type="submit"], button');
             if (submitBtn) {
-                submitBtn.setAttribute('data-orig-text', submitBtn.innerHTML);
                 submitBtn.disabled = true;
                 submitBtn.style.opacity = '0.5';
             }
 
-            const items = [{
-                id: parseInt(mainVariantId, 10),
-                quantity: parseInt(mainQty, 10)
-            }];
+            const items = [{ id: mainVariantId, quantity: mainQty }];
+            checkedBoxes.forEach((box) => {
+                const variantIdRaw = box.getAttribute('data-variant-id') || '';
+                const variantId = Number.parseInt(variantIdRaw, 10);
+                const groupId = box.getAttribute('data-group-id') || '';
+                const parentProductGid = box.getAttribute('data-parent-product-gid') || '';
+                if (!Number.isFinite(variantId) || variantId <= 0 || !groupId || !parentProductGid) return;
 
-            checkedBoxes.forEach(box => {
-                const vid = box.getAttribute('data-variant-id');
-                const gid = box.getAttribute('data-group-id');
-                const pgid = box.getAttribute('data-parent-product-gid');
-                if (vid) {
-                    items.push({
-                        id: parseInt(vid, 10),
-                        quantity: 1,
-                        parent_id: parseInt(mainVariantId, 10),
-                        properties: {
-                            "_bundle_parent_product_id": pgid,
-                            "_bundle_group_id": gid
-                        }
-                    });
-                }
+                items.push({
+                    id: variantId,
+                    quantity: 1,
+                    parent_id: mainVariantId,
+                    properties: {
+                        _bundle_parent_product_id: parentProductGid,
+                        _bundle_group_id: groupId,
+                    },
+                });
             });
 
-            console.log("PGB: Submission payload:", { items });
-
             try {
-                // Determine root URL, respecting localized stores
-                const rootUrl = window.Shopify && window.Shopify.routes ? window.Shopify.routes.root : '/';
+                const rootUrl = buildRootUrl();
                 const addUrl = rootUrl + (rootUrl.endsWith('/') ? 'cart/add.js' : '/cart/add.js');
-
                 const res = await fetch(addUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items })
+                    body: JSON.stringify({ items }),
                 });
 
-                if (res.ok) {
-                    const cartData = await res.json();
-                    document.dispatchEvent(new CustomEvent('pgb:added-to-cart', { detail: { items: cartData.items } }));
-                    window.location.href = rootUrl + (rootUrl.endsWith('/') ? 'cart' : '/cart');
-                } else {
-                    const error = await res.json().catch(() => ({}));
-                    console.error("PGB: Failed to add products to cart", error);
-                    const errorMsg = window.pgbTranslations?.addToCartError
-                        || "Error adding to cart. Please try again.";
-                    alert(errorMsg);
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.style.opacity = '1';
-                    }
+                if (!res.ok) {
+                    throw new Error('add-to-cart request failed');
                 }
+
+                const cartData = await res.json();
+                document.dispatchEvent(new CustomEvent('pgb:added-to-cart', { detail: { items: cartData.items } }));
+                window.location.href = rootUrl + (rootUrl.endsWith('/') ? 'cart' : '/cart');
             } catch (err) {
-                console.error("PGB: Network error when adding bundle to cart", err);
-                const errorMsg = window.pgbTranslations?.addToCartError
-                    || "Error adding to cart. Please try again.";
-                alert(errorMsg);
+                console.error('PGB: Failed to add products to cart', err);
+                const errorMsg = window.pgbTranslations?.addToCartError || 'Error adding to cart. Please try again.';
+                this.setError(errorMsg);
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.style.opacity = '1';
                 }
             }
-        }, true);
+        };
+
+        this.boundForm.addEventListener('submit', this.submitHandler, true);
     }
 }
 

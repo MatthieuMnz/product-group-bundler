@@ -1,24 +1,6 @@
 import type { RunInput, FunctionRunResult, CartOperation } from "../generated/api";
-
-interface BundleProduct {
-  productId: string;
-  handle?: string;
-  variantIds: string[];
-  discountValue: number;
-  variantDiscounts?: { id: string; discountValue: number }[];
-}
-
-interface BundleGroup {
-  id: string;
-  name: string;
-  sortOrder: number;
-  products: BundleProduct[];
-}
-
-interface BundleConfig {
-  version: number;
-  groups: BundleGroup[];
-}
+import type { BundleConfig } from "../../../shared/bundle-domain";
+import { parseBundleConfig, variantIdMatches } from "../../../shared/bundle-domain";
 
 export function run(input: RunInput): FunctionRunResult {
   const operations: CartOperation[] = [];
@@ -33,11 +15,9 @@ export function run(input: RunInput): FunctionRunResult {
       
       const metafield = line.merchandise.product.bundleGroups;
       if (metafield?.value && !parentMetafields.has(line.merchandise.product.id)) {
-        try {
-          const config: BundleConfig = JSON.parse(metafield.value);
+        const config = parseBundleConfig(metafield.value);
+        if (config) {
           parentMetafields.set(line.merchandise.product.id, config);
-        } catch {
-          // Invalid JSON
         }
       }
     }
@@ -65,6 +45,7 @@ export function run(input: RunInput): FunctionRunResult {
 
     // Find this product in the group
     const childProductId = merchandise.product.id;
+    if (childProductId === parentIdAttr) continue;
     const bundleProduct = group.products.find((p) => p.productId === childProductId);
     if (!bundleProduct) continue;
 
@@ -72,7 +53,7 @@ export function run(input: RunInput): FunctionRunResult {
     if (
       bundleProduct.variantIds &&
       bundleProduct.variantIds.length > 0 &&
-      !bundleProduct.variantIds.includes(merchandise.id)
+      !bundleProduct.variantIds.some((variantId) => variantIdMatches(variantId, merchandise.id))
     ) {
       continue;
     }
@@ -82,7 +63,7 @@ export function run(input: RunInput): FunctionRunResult {
 
     if (bundleProduct.variantDiscounts) {
       const variantDiscount = bundleProduct.variantDiscounts.find(
-        (v) => v.id === merchandise.id || v.id === merchandise.id.split('/').pop()
+        (v) => variantIdMatches(v.id, merchandise.id)
       );
       if (variantDiscount) {
         discountValue = variantDiscount.discountValue;
@@ -90,7 +71,7 @@ export function run(input: RunInput): FunctionRunResult {
     }
 
     // Skip if no discount to apply
-    if (!discountValue || discountValue <= 0) continue;
+    if (!Number.isFinite(discountValue) || discountValue <= 0) continue;
 
     const originalPrice = parseFloat(line.cost.amountPerQuantity.amount);
 

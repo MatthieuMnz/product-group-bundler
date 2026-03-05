@@ -4,24 +4,15 @@ import { useEffect } from "react";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import {
+  deactivateCartTransformById,
+  ensureBundleCartTransform,
+  listCartTransforms,
+} from "../cart-transform.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-
-  const response = await admin.graphql(
-    `#graphql
-    query {
-      cartTransforms(first: 10) {
-        nodes {
-          id
-          functionId
-        }
-      }
-    }`
-  );
-
-  const parsed = await response.json();
-  const cartTransforms = parsed.data?.cartTransforms?.nodes || [];
+  const cartTransforms = await listCartTransforms(admin);
 
   return {
     cartTransforms,
@@ -35,56 +26,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const actionType = formData.get("action");
 
   if (actionType === "activate") {
-    // Dynamically find the bundle-discount function ID via GraphQL
-    const fnResponse = await admin.graphql(
-      `#graphql
-      query {
-        shopifyFunctions(first: 25) {
-          nodes {
-            id
-            title
-            apiType
-            app {
-              title
-            }
-          }
-        }
-      }`
-    );
-
-    const fnParsed = await fnResponse.json();
-    const functions = fnParsed.data?.shopifyFunctions?.nodes || [];
-    const bundleFunction = functions.find(
-      (fn: any) => fn.apiType === "cart_transform"
-    );
-
-    if (!bundleFunction) {
-      return { error: "Fonction Cart Transform introuvable. Veuillez vous assurer que l'extension est compilée et déployée." };
+    try {
+      const result = await ensureBundleCartTransform(admin);
+      if (!result.success) {
+        return { error: result.error || "Impossible d'activer Cart Transform." };
+      }
+      return {
+        success: true,
+        message: result.alreadyActive ? "Cart Transform est deja actif." : "Cart Transform active !",
+      };
+    } catch (error) {
+      console.error("Failed to activate Cart Transform", error);
+      return { error: "Une erreur inattendue est survenue lors de l'activation." };
     }
-
-    const response = await admin.graphql(
-      `#graphql
-      mutation cartTransformCreate($functionId: String!) {
-        cartTransformCreate(functionId: $functionId, blockOnFailure: false) {
-          cartTransform {
-            id
-            functionId
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }`,
-      { variables: { functionId: bundleFunction.id } }
-    );
-
-    const parsed = await response.json();
-    if (parsed.data?.cartTransformCreate?.userErrors?.length) {
-      return { error: parsed.data.cartTransformCreate.userErrors[0].message };
-    }
-
-    return { success: true, message: "Cart Transform activé !" };
   }
 
   if (actionType === "deactivate") {
@@ -92,27 +46,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!cartTransformId) {
       return { error: "Aucun identifiant Cart Transform fourni." };
     }
-
-    const response = await admin.graphql(
-      `#graphql
-      mutation cartTransformDelete($id: ID!) {
-        cartTransformDelete(id: $id) {
-          deletedId
-          userErrors {
-            field
-            message
-          }
-        }
-      }`,
-      { variables: { id: cartTransformId } }
-    );
-
-    const parsed = await response.json();
-    if (parsed.data?.cartTransformDelete?.userErrors?.length) {
-      return { error: parsed.data.cartTransformDelete.userErrors[0].message };
+    try {
+      const result = await deactivateCartTransformById(admin, String(cartTransformId));
+      if (!result.success) {
+        return { error: result.error || "Impossible de desactiver Cart Transform." };
+      }
+      return {
+        success: true,
+        message: result.alreadyInactive ? "Cart Transform etait deja desactive." : "Cart Transform desactive.",
+      };
+    } catch (error) {
+      console.error("Failed to deactivate Cart Transform", error);
+      return { error: "Une erreur inattendue est survenue lors de la desactivation." };
     }
-
-    return { success: true, message: "Cart Transform désactivé." };
   }
 
   return null;

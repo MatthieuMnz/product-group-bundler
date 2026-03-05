@@ -114,6 +114,9 @@ importers:
       vite:
         specifier: ^6.3.6
         version: 6.4.1(@types/node@22.19.13)(jiti@2.6.1)(yaml@2.8.2)
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@22.19.13)(jiti@2.6.1)(jsdom@28.1.0)(yaml@2.8.2)
 
   extensions/bundle-action:
     dependencies:
@@ -142,6 +145,9 @@ importers:
       '@shopify/shopify-function-test-helpers':
         specifier: ^1.0.0
         version: 1.0.0
+      javy:
+        specifier: ^0.1.2
+        version: 0.1.2
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@22.19.13)(jiti@2.6.1)(jsdom@28.1.0)(yaml@2.8.2)
@@ -2886,6 +2892,9 @@ packages:
   iterator.prototype@1.1.5:
     resolution: {integrity: sha512-H0dkQoCa3b2VEeKQBOxFph+JAbcrQdE7KC0UkqwpLmv2EC4P41QXP+rqo9wYodACiG5/WM5s9oDApTU8utwj9g==}
     engines: {node: '>= 0.4'}
+
+  javy@0.1.2:
+    resolution: {integrity: sha512-z6Z+CV13SXBGxmY5UseWsYNVVR4SWPfOixKGluWi1Dpn594+M2JaGPBrFIIMnFFfi7kJzHCkcTn7CrhJ7JGKsA==}
 
   jiti@1.21.7:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
@@ -7490,6 +7499,8 @@ snapshots:
       get-proto: 1.0.1
       has-symbols: 1.1.0
       set-function-name: 2.0.2
+
+  javy@0.1.2: {}
 
   jiti@1.21.7: {}
 

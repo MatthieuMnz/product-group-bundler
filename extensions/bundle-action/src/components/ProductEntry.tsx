@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BlockStack, Box, Button, Checkbox, Image, InlineStack, Text, NumberField, useApi } from '@shopify/ui-extensions-react/admin';
 import { BundleProduct } from '../utils/types';
 import { useState } from 'react';
@@ -57,25 +56,24 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
   const bundlePrice = originalPrice !== null ? Math.max(0, originalPrice - discountValue) : null;
 
   return (
-    <Box padding="base" borderWidth="small" borderRadius="base" borderColor="subdued">
+    <Box padding="base">
       <BlockStack gap="base">
         {/* Product header row: thumbnail + info + remove */}
         <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
           <InlineStack gap="base" blockAlignment="center">
             {/* Product thumbnail */}
             {product._imageUrl ? (
-              <Box borderWidth="small" borderRadius="base" borderColor="subdued" minInlineSize="44px" minBlockSize="44px" maxInlineSize="64px" maxBlockSize="64px" overflow="hidden">
+              <Box minInlineSize={44} minBlockSize={44} maxInlineSize={64} maxBlockSize={64}>
                 <Image
                   source={product._imageUrl}
                   alt={displayName}
-                  fit="cover"
                 />
               </Box>
             ) : (
-              <Box borderWidth="small" borderRadius="base" borderColor="subdued" minInlineSize="44px" minBlockSize="44px" maxInlineSize="64px" maxBlockSize="64px" padding="base" />
+              <Box minInlineSize={44} minBlockSize={44} maxInlineSize={64} maxBlockSize={64} padding="base" />
             )}
             {/* Product info */}
-            <BlockStack gap="extraTight">
+            <BlockStack gap="small">
               <Text fontWeight="bold">{displayName}</Text>
             </BlockStack>
           </InlineStack>
@@ -85,24 +83,24 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
         {/* Pricing & Discount row */}
         <Box paddingBlockStart="small">
           <InlineStack gap="large" blockAlignment="center" inlineAlignment="start">
-            <BlockStack gap="extraTight">
-              <Text size="small" appearance="subdued">{i18n.translate('originalPrice') || 'Original price'}</Text>
+            <BlockStack gap="small">
+              <Text>{i18n.translate('originalPrice') || 'Original price'}</Text>
               <Text>{originalPrice !== null ? `$${originalPrice.toFixed(2)}` : '-'}</Text>
             </BlockStack>
             
-            <Box maxInlineSize="120px">
+            <Box maxInlineSize={120}>
               <NumberField
                 label={i18n.translate('discountValue') || 'Discount'}
                 value={product.discountValue}
-                onChange={(val: string | number) => onChange({ discountValue: Number(val) || 0 })}
+                onChange={(val) => onChange({ discountValue: Number(val) || 0 })}
                 min={0}
               />
             </Box>
 
-            <BlockStack gap="extraTight">
-              <Text size="small" appearance="subdued">{i18n.translate('bundlePrice') || 'Bundle price'}</Text>
+            <BlockStack gap="small">
+              <Text>{i18n.translate('bundlePrice') || 'Bundle price'}</Text>
               {bundlePrice !== null ? (
-                <Text appearance={discountValue > 0 ? 'success' : 'default'} fontWeight={discountValue > 0 ? 'bold' : 'normal'}>
+                <Text fontWeight={discountValue > 0 ? 'bold' : 'normal'}>
                   ${bundlePrice.toFixed(2)}
                 </Text>
               ) : (
@@ -115,11 +113,11 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
         {/* Variant section */}
         {hasMultipleVariants && (
           <Box paddingBlockStart="base">
-            <Box padding="base" borderWidth="small" borderRadius="base" borderColor="subdued" background="bg-surface-secondary">
+            <Box padding="base">
               <BlockStack gap="base">
                 <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
-                  <Text fontWeight="bold" size="small">{i18n.translate('variants') || 'Variants'}</Text>
-                  <InlineStack gap="tight">
+                  <Text fontWeight="bold">{i18n.translate('variants') || 'Variants'}</Text>
+                  <InlineStack gap="small">
                     <Button
                       variant={!showVariantPicker ? 'primary' : 'secondary'}
                       onClick={() => handleToggleVariantMode(true)}
@@ -137,7 +135,7 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
 
                 {showVariantPicker && (
                   <Box paddingBlockStart="small" paddingInlineStart="base">
-                    <BlockStack gap="tight">
+                    <BlockStack gap="small">
                       {variants.map(v => {
                         const isChecked = Array.isArray(product.variantIds) && product.variantIds.includes(v.id);
                         
@@ -151,7 +149,7 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
                         const vBundlePrice = vPrice !== null ? Math.max(0, vPrice - specDiscount) : null;
                         
                         return (
-                          <BlockStack gap="extraTight" key={v.id}>
+                          <BlockStack gap="small" key={v.id}>
                             <Checkbox
                               label={`${v.title}${v.price ? ` — $${v.price}` : ''}`}
                               checked={isChecked}
@@ -160,18 +158,18 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
                             {isChecked && (
                               <Box paddingInlineStart="large" paddingBlockEnd="small">
                                 <InlineStack gap="base" blockAlignment="center">
-                                  <Box maxInlineSize="120px">
+                                  <Box maxInlineSize={120}>
                                     <NumberField
                                       label={i18n.translate('discountValue') || 'Discount'}
                                       value={specDiscount}
-                                      onChange={(val: string | number) => handleVariantDiscountChange(v.id, Number(val) || 0)}
+                                      onChange={(val) => handleVariantDiscountChange(v.id, Number(val) || 0)}
                                       min={0}
                                     />
                                   </Box>
                                   {vBundlePrice !== null && (
-                                    <BlockStack gap="extraTight">
-                                      <Text size="small" appearance="subdued">{i18n.translate('bundlePrice') || 'Bundle price'}</Text>
-                                      <Text appearance={specDiscount > 0 ? 'success' : 'default'} fontWeight={specDiscount > 0 ? 'bold' : 'normal'}>
+                                    <BlockStack gap="small">
+                                      <Text>{i18n.translate('bundlePrice') || 'Bundle price'}</Text>
+                                      <Text fontWeight={specDiscount > 0 ? 'bold' : 'normal'}>
                                         ${vBundlePrice.toFixed(2)}
                                       </Text>
                                     </BlockStack>

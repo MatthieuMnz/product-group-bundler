@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApi } from '@shopify/ui-extensions-react/admin';
-import { BundleConfig, BundleProduct } from '../utils/types';
+import { BundleConfig } from '../utils/types';
+import {
+  createEmptyBundleConfig,
+  parseBundleConfig,
+  stripTransientBundleFields,
+} from '../../../../shared/bundle-domain';
 
 export function useBundleConfig(productId: string) {
   const { query } = useApi();
@@ -42,19 +47,7 @@ export function useBundleConfig(productId: string) {
     try {
       const namespace = await getNamespace();
       // Strip transient fields (like _variants) before saving
-      const cleanConfig: BundleConfig = {
-        ...newConfig,
-        groups: newConfig.groups.map(g => ({
-          ...g,
-            products: g.products.map(p => {
-              const productToSave: BundleProduct = { ...p };
-              delete productToSave._variants;
-              delete productToSave._imageUrl;
-              delete productToSave._price;
-              return productToSave;
-            }),
-        })),
-      };
+      const cleanConfig: BundleConfig = stripTransientBundleFields(newConfig);
       const res = await query<any>(`
         mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
           metafieldsSet(metafields: $metafields) {
@@ -110,7 +103,8 @@ export function useBundleConfig(productId: string) {
         }`, { variables: { productId, namespace } });
         
       if (res.data?.product?.metafield?.value) {
-        let parsedConfig = JSON.parse(res.data.product.metafield.value) as BundleConfig;
+        let parsedConfig =
+          parseBundleConfig(res.data.product.metafield.value) ?? createEmptyBundleConfig();
         
         // Auto-resolve missing handles
         const productsMissingHandles = [];
@@ -174,12 +168,12 @@ export function useBundleConfig(productId: string) {
         
         setConfig(parsedConfig);
       } else {
-        setConfig({ version: 1, groups: [] });
+        setConfig(createEmptyBundleConfig());
       }
     } catch (e) {
       console.error(e);
       setError(e as Error);
-      setConfig({ version: 1, groups: [] });
+      setConfig(createEmptyBundleConfig());
     } finally {
       setIsLoading(false);
     }

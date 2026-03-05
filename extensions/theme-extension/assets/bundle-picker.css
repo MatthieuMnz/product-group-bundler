@@ -58,6 +58,16 @@ pgb-bundle-picker,
   font-weight: var(--pgb-font-weight-bold);
 }
 
+.pgb-error-message {
+  margin: 0 0 var(--pgb-spacing-md);
+  padding: var(--pgb-spacing-sm) var(--pgb-spacing-md);
+  border: 1px solid #8B0000;
+  border-radius: var(--pgb-radius-sm);
+  background: rgba(139, 0, 0, 0.08);
+  color: #8B0000;
+  font-size: var(--pgb-font-size-sm);
+}
+
 /* --- Groups wrapper --- */
 .pgb-groups-wrapper {
   display: flex;

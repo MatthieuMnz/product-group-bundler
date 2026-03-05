@@ -1,9 +1,7 @@
-// @ts-nocheck
-import { BlockStack, Box, Badge, Button, InlineStack, Text, TextField, Divider } from '@shopify/ui-extensions-react/admin';
+import { BlockStack, Box, Badge, Button, InlineStack, Text, TextField, Divider, useApi } from '@shopify/ui-extensions-react/admin';
 import { BundleGroup, BundleProduct } from '../utils/types';
 import { ProductEntry } from './ProductEntry';
 import { useProductPicker } from '../hooks/useProductPicker';
-import { useApi } from '@shopify/ui-extensions-react/admin';
 import { useEffect } from 'react';
 
 interface GroupCardProps {
@@ -30,10 +28,13 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
     if (productsNeedingData.length === 0) return;
 
     const productIds = productsNeedingData.map(p => p.productId);
-    fetchProductMeta(query, productIds).then(metaMap => {
-      const updatedProducts = group.products.map(p => {
+    fetchProductMeta(query, productIds).then((metaMap) => {
+      const updatedProducts = group.products.map((p) => {
         if (!p._variants && metaMap.has(p.productId)) {
-          const meta = metaMap.get(p.productId)!;
+          const meta = metaMap.get(p.productId);
+          if (!meta) {
+            return p;
+          }
           return {
             ...p,
             _variants: meta.variants,
@@ -45,7 +46,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
       });
       onChange({ products: updatedProducts });
     });
-  }, [isExpanded]);
+  }, [isExpanded, group.products, fetchProductMeta, onChange, query]);
 
   const handleProductChange = (index: number, update: Partial<BundleProduct>) => {
     const products = [...group.products];
@@ -85,7 +86,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
 
   // Reordering controls
   const ReorderButtons = () => (
-    <InlineStack gap="tight" blockAlignment="center">
+    <InlineStack gap="small" blockAlignment="center">
       <Button variant="tertiary" disabled={isFirst} onClick={onMoveUp}>↑</Button>
       <Button variant="tertiary" disabled={isLast} onClick={onMoveDown}>↓</Button>
     </InlineStack>
@@ -94,7 +95,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
   // Collapsed: compact summary row
   if (!isExpanded) {
     return (
-      <Box padding="base" paddingBlock="small" borderWidth="small" borderRadius="base" borderColor="subdued" background="bg-surface-secondary">
+      <Box padding="base" paddingBlock="small">
         <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
           <InlineStack gap="base" blockAlignment="center">
             <Button variant="tertiary" onClick={onToggle}>▸</Button>
@@ -111,7 +112,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
 
   // Expanded: full editing form
   return (
-    <Box padding="base" borderWidth="small" borderRadius="large" borderColor="subdued">
+    <Box padding="base">
       <BlockStack gap="base">
         <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
           <InlineStack gap="base" blockAlignment="center">

@@ -1,20 +1,5 @@
-export interface BundleProduct {
-  productId: string;
-  handle?: string;
-  title?: string;
-  variantIds: string[];
-  discountValue: number;
-  variantDiscounts?: { id: string; discountValue: number }[];
-}
-
-export interface BundleGroup {
-  id: string;
-  name: string;
-  sortOrder: number;
-  products: BundleProduct[];
-}
-
-export interface BundleConfig {
-  version: number;
-  groups: BundleGroup[];
-}
+export type {
+  BundleProduct,
+  BundleGroup,
+  BundleConfig,
+} from '../../../../shared/bundle-domain';

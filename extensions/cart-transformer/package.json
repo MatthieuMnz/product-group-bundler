@@ -4,12 +4,13 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "shopify": "npm exec -- shopify",
-    "typegen": "npm exec -- shopify app function typegen",
-    "build": "npm exec -- shopify app function build",
-    "build:function": "tsc --outDir dist && npx --yes javy compile dist/run.js -o dist/index.wasm",
-    "preview": "npm exec -- shopify app function run",
-    "test": "vitest",
+    "shopify": "pnpm exec shopify",
+    "typegen": "pnpm exec shopify app function typegen",
+    "build": "pnpm exec shopify app function build",
+    "build:function": "tsc --outDir dist && pnpm exec javy compile dist/run.js -o dist/index.wasm",
+    "preview": "pnpm exec shopify app function run",
+    "test": "vitest run src/",
+    "test:integration": "vitest run tests/default.test.js",
     "test:unit": "vitest run src/"
   },
   "codegen": {
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@shopify/shopify-function-test-helpers": "^1.0.0",
+    "javy": "^0.1.2",
     "vitest": "^3.2.4"
   }
 }

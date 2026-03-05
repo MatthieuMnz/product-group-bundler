@@ -4,27 +4,14 @@ import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { ensureBundleCartTransform, listCartTransforms } from "../cart-transform.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  
-  // Check if Cart Transform is already created
-  const response = await admin.graphql(
-    `#graphql
-    query {
-      cartTransforms(first: 1) {
-        nodes {
-          id
-          functionId
-        }
-      }
-    }`
-  );
-  
-  const parsed = await response.json();
-  const cartTransforms = parsed.data?.cartTransforms?.nodes || [];
-  
-  return { 
+
+  const cartTransforms = await listCartTransforms(admin);
+
+  return {
     hasCartTransform: cartTransforms.length > 0,
   };
 };
@@ -34,60 +21,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   if (formData.get("action") === "setupCartTransform") {
-    // Dynamically find the bundle-discount function ID via GraphQL
-    const fnResponse = await admin.graphql(
-      `#graphql
-      query {
-        shopifyFunctions(first: 25) {
-          nodes {
-            id
-            title
-            apiType
-            app {
-              title
-            }
-          }
-        }
-      }`
-    );
-
-    const fnParsed = await fnResponse.json();
-    const functions = fnParsed.data?.shopifyFunctions?.nodes || [];
-    const bundleFunction = functions.find(
-      (fn: any) => fn.apiType === "cart_transform"
-    );
-
-    if (!bundleFunction) {
-      return { error: "Fonction Cart Transform introuvable. Veuillez vous assurer que l'extension est compilée et déployée." };
-    }
-
-    const response = await admin.graphql(
-      `#graphql
-      mutation cartTransformCreate($functionId: String!) {
-        cartTransformCreate(functionId: $functionId, blockOnFailure: false) {
-          cartTransform {
-            id
-            functionId
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }`,
-      {
-        variables: {
-          functionId: bundleFunction.id
-        }
+    try {
+      const result = await ensureBundleCartTransform(admin);
+      if (!result.success) {
+        return { error: result.error || "Impossible d'activer Cart Transform." };
       }
-    );
-    
-    const parsed = await response.json();
-    if (parsed.data?.cartTransformCreate?.userErrors?.length) {
-      return { error: parsed.data.cartTransformCreate.userErrors[0].message };
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to setup Cart Transform", error);
+      return { error: "Une erreur inattendue est survenue lors de l'activation." };
     }
-    
-    return { success: true };
   }
   
   return null;

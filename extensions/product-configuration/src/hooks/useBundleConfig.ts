@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApi } from '@shopify/ui-extensions-react/admin';
 import { BundleConfig } from '../utils/types';
+import {
+  createEmptyBundleConfig,
+  parseBundleConfig,
+  stripTransientBundleFields,
+} from '../../../../shared/bundle-domain';
 
 export function useBundleConfig(productId: string) {
   const { query } = useApi();
@@ -50,7 +55,8 @@ export function useBundleConfig(productId: string) {
         }`, { variables: { productId, namespace } });
         
       if (res.data?.product?.metafield?.value) {
-        const parsedConfig = JSON.parse(res.data.product.metafield.value);
+        const parsedConfig =
+          parseBundleConfig(res.data.product.metafield.value) ?? createEmptyBundleConfig();
         
         // 2. Extract up to 3 product IDs from EACH of the first 2 groups to fetch images for the preview
         const previewGids: string[] = [];
@@ -84,9 +90,9 @@ export function useBundleConfig(productId: string) {
             });
             
             // 3. Hydrate the config with images for the preview
-            parsedConfig.groups = parsedConfig.groups.map((g: Record<string, any>) => ({
+            parsedConfig.groups = parsedConfig.groups.map((g) => ({
               ...g,
-              products: g.products.map((p: Record<string, any>) => {
+              products: g.products.map((p) => {
                 const meta = imageMap.get(p.productId);
                 return {
                   ...p,
@@ -100,11 +106,11 @@ export function useBundleConfig(productId: string) {
         
         setConfig(parsedConfig);
       } else {
-        setConfig({ version: 1, groups: [] });
+        setConfig(createEmptyBundleConfig());
       }
     } catch (e) {
       console.error(e);
-      setConfig({ version: 1, groups: [] });
+      setConfig(createEmptyBundleConfig());
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +123,7 @@ export function useBundleConfig(productId: string) {
   const saveConfig = async (newConfig: BundleConfig) => {
     try {
       const namespace = await getNamespace();
+      const cleanConfig = stripTransientBundleFields(newConfig);
       const res = await query<Record<string, any>>(`
         mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
           metafieldsSet(metafields: $metafields) {
@@ -137,7 +144,7 @@ export function useBundleConfig(productId: string) {
                 namespace: namespace,
                 key: "bundle_groups",
                 type: "json",
-                value: JSON.stringify(newConfig)
+                value: JSON.stringify(cleanConfig)
               }
             ]
           }

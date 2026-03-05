@@ -1,6 +1,7 @@
 {
   "name": "product-group-bundler",
   "private": true,
+  "packageManager": "pnpm@10.29.2",
   "scripts": {
     "build": "react-router build",
     "dev": "shopify app dev",
@@ -13,6 +14,9 @@
     "docker-start": "pnpm run setup && pnpm run start",
     "setup": "prisma generate && prisma migrate deploy",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "test": "pnpm exec vitest run",
+    "test:extensions": "pnpm --filter cart-transformer run test:unit",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run test:extensions",
     "shopify": "shopify",
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
@@ -60,7 +64,8 @@
     "jsdom": "^28.1.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3",
-    "vite": "^6.3.6"
+    "vite": "^6.3.6",
+    "vitest": "^3.2.4"
   },
   "workspaces": {
     "packages": [
