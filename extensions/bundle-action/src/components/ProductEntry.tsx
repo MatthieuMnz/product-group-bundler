@@ -1,6 +1,7 @@
-import { BlockStack, Box, Button, Checkbox, Divider, Image, InlineStack, Text, NumberField, useApi } from '@shopify/ui-extensions-react/admin';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { BundleProduct } from '../utils/types';
-import { useEffect, useMemo, useRef, useState } from 'react';
+
+const t = (key: string) => shopify.i18n.translate(key);
 
 interface ProductEntryProps {
   product: BundleProduct;
@@ -9,7 +10,6 @@ interface ProductEntryProps {
 }
 
 export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps) {
-  const { i18n } = useApi();
   const displayName = product.title || product.handle || product.productId;
   const hasVariantRestriction = Array.isArray(product.variantIds) && product.variantIds.length > 0;
   const [isVariantSectionOpen, setIsVariantSectionOpen] = useState(false);
@@ -23,7 +23,7 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
       onChange({ variantIds: [...current, variantId] });
     } else {
       if (current.length <= 1) return;
-      onChange({ 
+      onChange({
         variantIds: current.filter(id => id !== variantId),
         variantDiscounts: currentDiscounts.filter(vd => vd.id !== variantId)
       });
@@ -56,95 +56,102 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
     }
   }, [hasMultipleVariants, hasVariantRestriction, onChange, product.productId, variants]);
 
-  // Calculate price preview
   const originalPrice = product._price ? parseFloat(product._price) : null;
   const discountValue = product.discountValue || 0;
   const bundlePrice = originalPrice !== null ? Math.max(0, originalPrice - discountValue) : null;
 
   return (
-    <Box padding="base">
-      <BlockStack gap="base">
-        <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
-          <InlineStack gap="base" blockAlignment="center">
+    <s-box background="subdued" padding="base" borderRadius="base">
+      <s-stack gap="base">
+        {/* Product header: thumbnail + name + remove */}
+        <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+          <s-stack direction="inline" gap="base" alignItems="center">
             {product._imageUrl ? (
-              <Box minInlineSize={44} minBlockSize={44} maxInlineSize={64} maxBlockSize={64}>
-                <Image
-                  source={product._imageUrl}
-                  alt={displayName}
-                />
-              </Box>
+              <s-thumbnail
+                src={product._imageUrl}
+                alt={displayName}
+                size="small"
+              ></s-thumbnail>
             ) : (
-              <Box minInlineSize={44} minBlockSize={44} maxInlineSize={64} maxBlockSize={64} padding="base" />
+              <s-thumbnail alt={displayName} size="small"></s-thumbnail>
             )}
-            <BlockStack gap="small">
-              <Text fontWeight="bold">{displayName}</Text>
-            </BlockStack>
-          </InlineStack>
-          <Button onClick={onRemove} tone="critical" variant="tertiary">
-            {i18n.translate('removeProduct') || 'Remove'}
-          </Button>
-        </InlineStack>
+            <s-stack gap="small">
+              <s-text type="strong">{displayName}</s-text>
+              {hasMultipleVariants && (
+                <s-badge tone="info" icon="variant">
+                  {selectedVariantCount} {t('selected')}
+                </s-badge>
+              )}
+            </s-stack>
+          </s-stack>
+          <s-button
+            onClick={onRemove}
+            tone="critical"
+            variant="tertiary"
+            icon="delete"
+            accessibilityLabel={t('removeProduct')}
+          ></s-button>
+        </s-stack>
 
-        <Divider />
+        {/* Pricing section */}
+        <s-box background="base" padding="base" borderRadius="base">
+          <s-stack gap="base">
+            <s-text type="strong">{t('pricingSection')}</s-text>
+            <s-stack direction="inline" gap="large" alignItems="start" justifyContent="space-between">
+              <s-stack gap="small">
+                <s-text color="subdued">{t('originalPrice')}</s-text>
+                <s-text>{originalPrice !== null ? `$${originalPrice.toFixed(2)}` : '—'}</s-text>
+              </s-stack>
 
-        <Box padding="small">
-          <BlockStack gap="base">
-            <InlineStack gap="large" blockAlignment="start" inlineAlignment="space-between">
-              <BlockStack gap="small">
-                <Text>{i18n.translate('originalPrice') || 'Original price'}</Text>
-                <Text>{originalPrice !== null ? `$${originalPrice.toFixed(2)}` : '-'}</Text>
-              </BlockStack>
-
-              <Box maxInlineSize={220}>
-                <NumberField
-                  label={i18n.translate('discountValue') || 'Discount'}
-                  value={product.discountValue}
-                  onChange={(val) => onChange({ discountValue: Number(val) || 0 })}
+              <s-box maxInlineSize="200px">
+                <s-number-field
+                  label={t('discountValue')}
+                  value={String(product.discountValue ?? 0)}
                   min={0}
-                />
-              </Box>
-
-              <BlockStack gap="small">
-                <Text>{i18n.translate('bundlePrice') || 'Bundle price'}</Text>
-                {bundlePrice !== null ? (
-                  <Text fontWeight={discountValue > 0 ? 'bold' : 'normal'}>
-                    ${bundlePrice.toFixed(2)}
-                  </Text>
-                ) : (
-                  <Text>-</Text>
+                  onChange={(e: any) => onChange({ discountValue: Number(e.target.value) || 0 })}
+                ></s-number-field>
+                {(product.discountValue || 0) <= 0 && (
+                  <s-box paddingBlockStart="small">
+                    <s-text color="subdued" tone="caution">{t('discountHint')}</s-text>
+                  </s-box>
                 )}
-              </BlockStack>
-            </InlineStack>
-          </BlockStack>
-        </Box>
+              </s-box>
 
-        {hasMultipleVariants && (
-          <Box>
-            <Divider />
-          </Box>
-        )}
+              <s-stack gap="small">
+                <s-text color="subdued">{t('bundlePrice')}</s-text>
+                {bundlePrice !== null ? (
+                  <s-text type={discountValue > 0 ? 'strong' : 'generic'}>
+                    ${bundlePrice.toFixed(2)}
+                  </s-text>
+                ) : (
+                  <s-text>—</s-text>
+                )}
+              </s-stack>
+            </s-stack>
+          </s-stack>
+        </s-box>
 
+        {/* Variants section */}
         {hasMultipleVariants && (
-          <Box padding="small">
-            <BlockStack gap="base">
-              <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
-                <BlockStack gap="small">
-                  <Text fontWeight="bold">{i18n.translate('variants') || 'Variants'}</Text>
-                  <Text>
-                    {i18n.translate('variantsSelectedCount', {
-                      count: selectedVariantCount,
-                    }) || `${selectedVariantCount} selected`}
-                  </Text>
-                </BlockStack>
-                <Button variant="tertiary" onClick={() => setIsVariantSectionOpen((prev) => !prev)}>
-                  {isVariantSectionOpen
-                    ? (i18n.translate('collapse') || 'Collapse')
-                    : (i18n.translate('expand') || 'Expand')}
-                </Button>
-              </InlineStack>
+          <s-box background="base" padding="base" borderRadius="base">
+            <s-stack gap="base">
+              <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+                <s-stack direction="inline" gap="small" alignItems="center">
+                  <s-text type="strong">{t('variants')}</s-text>
+                  <s-badge tone="info" icon="variant">
+                    {selectedVariantCount} {t('selected')}
+                  </s-badge>
+                </s-stack>
+                <s-button
+                  variant="tertiary"
+                  icon={isVariantSectionOpen ? 'chevron-up' : 'chevron-down'}
+                  accessibilityLabel={isVariantSectionOpen ? t('collapse') : t('expand')}
+                  onClick={() => setIsVariantSectionOpen((prev) => !prev)}
+                ></s-button>
+              </s-stack>
 
               {isVariantSectionOpen && (
-                <BlockStack gap="base">
+                <s-stack gap="small">
                   {variants.map(v => {
                     const isChecked = selectedVariantIds.includes(v.id);
 
@@ -158,46 +165,45 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
                     const vBundlePrice = vPrice !== null ? Math.max(0, vPrice - specDiscount) : null;
 
                     return (
-                      <Box key={v.id} padding="base">
-                        <BlockStack gap="small">
-                          <Checkbox
+                      <s-box key={v.id} padding="small" borderRadius="small" border="base">
+                        <s-stack gap="small">
+                          <s-checkbox
                             label={`${v.title}${v.price ? ` — $${v.price}` : ''}`}
                             checked={isChecked}
-                            onChange={(checked: boolean) => handleVariantToggle(v.id, checked)}
-                          />
+                            onChange={(e: any) => handleVariantToggle(v.id, e.target.checked)}
+                          ></s-checkbox>
                           {isChecked && (
-                            <Box paddingInlineStart="large">
-                              <InlineStack gap="base" blockAlignment="start" inlineAlignment="space-between">
-                                <Box maxInlineSize={220}>
-                                  <NumberField
-                                    label={i18n.translate('discountValue') || 'Discount'}
-                                    value={specDiscount}
-                                    onChange={(val) => handleVariantDiscountChange(v.id, Number(val) || 0)}
+                            <s-box paddingInlineStart="large">
+                              <s-stack direction="inline" gap="base" alignItems="start" justifyContent="space-between">
+                                <s-box maxInlineSize="200px">
+                                  <s-number-field
+                                    label={t('discountValue')}
+                                    value={String(specDiscount ?? 0)}
                                     min={0}
-                                  />
-                                </Box>
+                                    onChange={(e: any) => handleVariantDiscountChange(v.id, Number(e.target.value) || 0)}
+                                  ></s-number-field>
+                                </s-box>
                                 {vBundlePrice !== null && (
-                                  <BlockStack gap="small">
-                                    <Text>{i18n.translate('bundlePrice') || 'Bundle price'}</Text>
-                                    <Text fontWeight={specDiscount > 0 ? 'bold' : 'normal'}>
+                                  <s-stack gap="small">
+                                    <s-text color="subdued">{t('bundlePrice')}</s-text>
+                                    <s-text type={specDiscount > 0 ? 'strong' : 'generic'}>
                                       ${vBundlePrice.toFixed(2)}
-                                    </Text>
-                                  </BlockStack>
+                                    </s-text>
+                                  </s-stack>
                                 )}
-                              </InlineStack>
-                            </Box>
+                              </s-stack>
+                            </s-box>
                           )}
-                          <Divider />
-                        </BlockStack>
-                      </Box>
+                        </s-stack>
+                      </s-box>
                     );
                   })}
-                </BlockStack>
+                </s-stack>
               )}
-            </BlockStack>
-          </Box>
+            </s-stack>
+          </s-box>
         )}
-      </BlockStack>
-    </Box>
+      </s-stack>
+    </s-box>
   );
 }

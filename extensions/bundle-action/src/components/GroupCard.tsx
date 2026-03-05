@@ -1,8 +1,9 @@
-import { BlockStack, Box, Badge, Button, InlineStack, Text, TextField, Divider, useApi } from '@shopify/ui-extensions-react/admin';
+import { useEffect } from 'preact/hooks';
 import { BundleGroup, BundleProduct } from '../utils/types';
 import { ProductEntry } from './ProductEntry';
 import { useProductPicker } from '../hooks/useProductPicker';
-import { useEffect } from 'react';
+
+const t = (key: string) => shopify.i18n.translate(key);
 
 interface GroupCardProps {
   group: BundleGroup;
@@ -18,23 +19,19 @@ interface GroupCardProps {
 }
 
 export function GroupCard({ group, currentProductId, isExpanded, onToggle, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isLast }: GroupCardProps) {
-  const { i18n, query } = useApi();
   const { pickProducts, fetchProductMeta } = useProductPicker();
 
-  // Hydrate variant + image data for products that don't have _variants loaded yet
   useEffect(() => {
     if (!isExpanded) return;
     const productsNeedingData = group.products.filter(p => !p._variants);
     if (productsNeedingData.length === 0) return;
 
     const productIds = productsNeedingData.map(p => p.productId);
-    fetchProductMeta(query, productIds).then((metaMap) => {
+    fetchProductMeta(shopify.query.bind(shopify), productIds).then((metaMap) => {
       const updatedProducts = group.products.map((p) => {
         if (!p._variants && metaMap.has(p.productId)) {
           const meta = metaMap.get(p.productId);
-          if (!meta) {
-            return p;
-          }
+          if (!meta) return p;
           return {
             ...p,
             _variants: meta.variants,
@@ -46,7 +43,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
       });
       onChange({ products: updatedProducts });
     });
-  }, [isExpanded, group.products, fetchProductMeta, onChange, query]);
+  }, [isExpanded, group.products, fetchProductMeta, onChange]);
 
   const handleProductChange = (index: number, update: Partial<BundleProduct>) => {
     const products = [...group.products];
@@ -80,79 +77,75 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
       }));
 
     if (newProducts.length === 0) return;
-
     onChange({ products: [...group.products, ...newProducts] });
   };
 
-  // Reordering controls
-  const ReorderButtons = () => (
-    <InlineStack gap="small" blockAlignment="center">
-      <Button variant="tertiary" disabled={isFirst} onClick={onMoveUp}>↑</Button>
-      <Button variant="tertiary" disabled={isLast} onClick={onMoveDown}>↓</Button>
-    </InlineStack>
-  );
+  const displayName = group.name || t('unnamedGroup');
+  const productCountLabel = `${group.products.length} ${group.products.length !== 1 ? t('products') : t('product')}`;
 
-  // Collapsed: compact summary row
   if (!isExpanded) {
     return (
-      <Box padding="base" paddingBlock="small">
-        <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
-          <InlineStack gap="base" blockAlignment="center">
-            <Button variant="tertiary" onClick={onToggle}>▸</Button>
-            <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
-            <Badge tone="info">
-              {group.products.length} {group.products.length !== 1 ? i18n.translate('products') : i18n.translate('product')}
-            </Badge>
-          </InlineStack>
-          <ReorderButtons />
-        </InlineStack>
-      </Box>
+      <s-section heading={displayName}>
+        <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+          <s-stack direction="inline" gap="base" alignItems="center">
+            <s-badge tone="info" icon="product">{productCountLabel}</s-badge>
+          </s-stack>
+          <s-stack direction="inline" gap="small" alignItems="center">
+            <s-button variant="tertiary" icon="arrow-up" disabled={isFirst} onClick={onMoveUp} accessibilityLabel={t('moveUp')}></s-button>
+            <s-button variant="tertiary" icon="arrow-down" disabled={isLast} onClick={onMoveDown} accessibilityLabel={t('moveDown')}></s-button>
+            <s-button variant="tertiary" icon="chevron-down" onClick={onToggle} accessibilityLabel={t('expand')}></s-button>
+          </s-stack>
+        </s-stack>
+      </s-section>
     );
   }
 
-  // Expanded: full editing form
   return (
-    <Box padding="base">
-      <BlockStack gap="base">
-        <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
-          <InlineStack gap="base" blockAlignment="center">
-            <Button variant="tertiary" onClick={onToggle}>▾</Button>
-            <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
-            <Badge tone="info">
-              {group.products.length} {group.products.length !== 1 ? i18n.translate('products') : i18n.translate('product')}
-            </Badge>
-          </InlineStack>
-          <InlineStack gap="base" blockAlignment="center">
-            <ReorderButtons />
-            <Button tone="critical" variant="tertiary" onClick={onRemove}>{i18n.translate('removeGroup')}</Button>
-          </InlineStack>
-        </InlineStack>
+    <s-section heading={displayName}>
+      <s-stack gap="large">
+        {/* Group toolbar: badges + reorder + collapse/remove */}
+        <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+          <s-stack direction="inline" gap="base" alignItems="center">
+            <s-badge tone="info" icon="product">{productCountLabel}</s-badge>
+          </s-stack>
+          <s-stack direction="inline" gap="small" alignItems="center">
+            <s-button variant="tertiary" icon="arrow-up" disabled={isFirst} onClick={onMoveUp} accessibilityLabel={t('moveUp')}></s-button>
+            <s-button variant="tertiary" icon="arrow-down" disabled={isLast} onClick={onMoveDown} accessibilityLabel={t('moveDown')}></s-button>
+            <s-button variant="tertiary" icon="chevron-up" onClick={onToggle} accessibilityLabel={t('collapse')}></s-button>
+            <s-button tone="critical" variant="tertiary" icon="delete" onClick={onRemove} accessibilityLabel={t('removeGroup')}></s-button>
+          </s-stack>
+        </s-stack>
 
-        <Box paddingBlockEnd="small">
-          <TextField
-            label={i18n.translate('groupName')}
-            value={group.name}
-            onChange={(val: string) => onChange({ name: val })}
-          />
-        </Box>
+        {/* Group name field */}
+        <s-text-field
+          label={t('groupName')}
+          value={group.name}
+          onChange={(e: any) => onChange({ name: e.target.value })}
+        ></s-text-field>
+        {!group.name.trim() && (
+          <s-text tone="caution">{t('groupNameHintRequired')}</s-text>
+        )}
 
-        {group.products.length > 0 && <Divider />}
+        {/* Product list */}
+        {group.products.length > 0 && (
+          <s-stack gap="base">
+            {group.products.map((product, index) => (
+              <ProductEntry
+                key={product.productId || index}
+                product={product}
+                onChange={(update) => handleProductChange(index, update)}
+                onRemove={() => handleProductRemove(index)}
+              />
+            ))}
+          </s-stack>
+        )}
 
-        <BlockStack gap="base">
-          {group.products.map((product, index) => (
-            <ProductEntry
-              key={product.productId || index}
-              product={product}
-              onChange={(update) => handleProductChange(index, update)}
-              onRemove={() => handleProductRemove(index)}
-            />
-          ))}
-        </BlockStack>
-
-        <Box paddingBlockStart="small">
-          <Button onClick={handleAddProduct}>{i18n.translate('addProduct')}</Button>
-        </Box>
-      </BlockStack>
-    </Box>
+        {/* Add product button */}
+        <s-stack direction="inline" justifyContent="space-between" alignItems="center">
+          <s-text color="subdued">{t('productsInGroup')}</s-text>
+          <s-button icon="product-add" onClick={handleAddProduct}>{t('addProduct')}</s-button>
+        </s-stack>
+      </s-stack>
+    </s-section>
   );
 }

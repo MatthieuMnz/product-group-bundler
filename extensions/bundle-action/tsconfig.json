@@ -1,13 +1,17 @@
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "target": "es2020",
+    "jsxImportSource": "preact",
+    "target": "ES2020",
     "module": "esnext",
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "checkJs": true,
+    "allowJs": true,
     "noEmit": true
-  }
+  },
+  "include": ["./src", "./shopify.d.ts"]
 }

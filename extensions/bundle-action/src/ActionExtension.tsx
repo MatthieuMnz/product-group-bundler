@@ -1,47 +1,25 @@
-import {
-  reactExtension,
-  useApi,
-  AdminAction,
-  BlockStack,
-  Button,
-  InlineStack,
-  Text,
-  Banner,
-  ProgressIndicator,
-  Box,
-  Divider,
-} from '@shopify/ui-extensions-react/admin';
-import { useState } from 'react';
+import '@shopify/ui-extensions/preact';
+import { render } from 'preact';
+import { useState } from 'preact/hooks';
 import { useBundleConfig } from './hooks/useBundleConfig';
 import { EmptyState } from './components/EmptyState';
 import { GroupCard } from './components/GroupCard';
 import { generateId, validateConfig } from './utils/validation';
 import { BundleGroup } from './utils/types';
 
-const TARGET = 'admin.product-details.action.render';
-
-export default reactExtension(TARGET, () => <App />);
+export default function extension() {
+  render(<App />, document.body);
+}
 
 function App() {
-  const api = useApi();
-  const { data, i18n, close } = api as any;
-  const productId = (data as any)?.selected?.[0]?.id || "gid://shopify/Product/0";
+  const productId = (shopify as any).data?.selected?.[0]?.id || "gid://shopify/Product/0";
+  const t = (key: string) => shopify.i18n.translate(key);
 
-  const { config, isLoading, saveConfig, setConfig } = useBundleConfig(productId);
+  const { config, isLoading, isResolving, saveConfig, setConfig } = useBundleConfig(productId);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
-
-  if (isLoading) {
-    return (
-      <AdminAction title={i18n.translate('blockTitle')} primaryAction={<Button disabled>{i18n.translate('save')}</Button>}>
-        <BlockStack gap="base">
-          <ProgressIndicator size="base" />
-        </BlockStack>
-      </AdminAction>
-    );
-  }
 
   const handleSave = async () => {
     if (!config) return;
@@ -52,7 +30,6 @@ function App() {
       setErrors(result.errors);
       return;
     }
-    // Show warnings but don't block save
     if (result.warnings.length > 0) {
       setWarnings(result.warnings);
     }
@@ -60,9 +37,9 @@ function App() {
     setIsSaving(true);
     try {
       await saveConfig(config);
-      close();
+      shopify.close();
     } catch (e: any) {
-      setErrors([e.message || i18n.translate('error')]);
+      setErrors([e.message || t('error')]);
     } finally {
       setIsSaving(false);
     }
@@ -106,13 +83,9 @@ function App() {
 
     const newGroups = [...config.groups];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    // Swap objects
     const temp = newGroups[index];
     newGroups[index] = newGroups[targetIndex];
     newGroups[targetIndex] = temp;
-
-    // Update sortOrder
     newGroups[index].sortOrder = index;
     newGroups[targetIndex].sortOrder = targetIndex;
 
@@ -123,43 +96,58 @@ function App() {
     setExpandedGroupId((prev) => (prev === groupId ? null : groupId));
   };
 
+  const groupCount = config?.groups.length || 0;
+  const productCount = config?.groups.reduce((sum, group) => sum + group.products.length, 0) || 0;
+
   return (
-    <AdminAction
-      title={i18n.translate('blockTitle')}
-      primaryAction={
-        <Button variant="primary" disabled={isSaving} onClick={handleSave}>
-          {i18n.translate('save')}
-        </Button>
-      }
-      secondaryAction={
-        <Button onClick={close}>Cancel</Button>
-      }
-    >
-      <BlockStack gap="base">
+    <s-admin-action heading={t('blockTitle')} loading={isLoading}>
+      <s-stack gap="large">
         {errors.length > 0 && (
-          <Banner tone="critical">
-            <BlockStack gap="small">
+          <s-banner tone="critical" dismissible>
+            <s-stack gap="small">
               {errors.map((err, i) => (
-                <Text key={i}>• {err}</Text>
+                <s-paragraph key={i}>{err}</s-paragraph>
               ))}
-            </BlockStack>
-          </Banner>
+            </s-stack>
+          </s-banner>
         )}
 
         {warnings.length > 0 && (
-          <Banner tone="warning">
-            <BlockStack gap="small">
+          <s-banner tone="warning" dismissible>
+            <s-stack gap="small">
               {warnings.map((w, i) => (
-                <Text key={i}>⚠ {w}</Text>
+                <s-paragraph key={i}>{w}</s-paragraph>
               ))}
-            </BlockStack>
-          </Banner>
+            </s-stack>
+          </s-banner>
         )}
+
+        <s-section heading={t('manageBundles')}>
+          <s-stack gap="base">
+            <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+              <s-stack direction="inline" gap="base" alignItems="center">
+                <s-badge tone="info" icon="collection">
+                  {groupCount} {groupCount === 1 ? t('group') : t('groups')}
+                </s-badge>
+                <s-badge icon="product">
+                  {productCount} {productCount === 1 ? t('product') : t('products')}
+                </s-badge>
+              </s-stack>
+              <s-button icon="plus" onClick={handleAddGroup}>{t('addGroup')}</s-button>
+            </s-stack>
+            {isResolving && (
+              <s-stack direction="inline" gap="small" alignItems="center">
+                <s-spinner size="base"></s-spinner>
+                <s-text color="subdued">{t('resolvingProducts')}</s-text>
+              </s-stack>
+            )}
+          </s-stack>
+        </s-section>
 
         {config?.groups.length === 0 ? (
           <EmptyState onAdd={handleAddGroup} />
         ) : (
-          <BlockStack gap="large">
+          <s-stack gap="base">
             {config?.groups.map((group, index) => (
               <GroupCard
                 key={group.id}
@@ -176,17 +164,30 @@ function App() {
               />
             ))}
 
-            <Box paddingBlockStart="base" paddingBlockEnd="large">
-              <Divider />
-              <Box paddingBlockStart="base">
-                <InlineStack inlineAlignment="center">
-                  <Button onClick={handleAddGroup}>{i18n.translate('addGroup')}</Button>
-                </InlineStack>
-              </Box>
-            </Box>
-          </BlockStack>
+            <s-box paddingBlockStart="base">
+              <s-stack direction="inline" justifyContent="center">
+                <s-button icon="plus" onClick={handleAddGroup}>{t('addGroup')}</s-button>
+              </s-stack>
+            </s-box>
+          </s-stack>
         )}
-      </BlockStack>
-    </AdminAction>
+      </s-stack>
+
+      <s-button
+        slot="primary-action"
+        variant="primary"
+        icon="save"
+        disabled={isSaving}
+        onClick={handleSave}
+      >
+        {t('save')}
+      </s-button>
+      <s-button
+        slot="secondary-actions"
+        onClick={() => shopify.close()}
+      >
+        Cancel
+      </s-button>
+    </s-admin-action>
   );
 }

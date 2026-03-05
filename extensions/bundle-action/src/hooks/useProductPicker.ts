@@ -1,5 +1,4 @@
-import { useApi } from '@shopify/ui-extensions-react/admin';
-import { useCallback } from 'react';
+import { useCallback } from 'preact/hooks';
 
 interface PickedVariant {
   id: string;
@@ -21,33 +20,14 @@ type QueryFn = <T = unknown>(
   options?: { variables?: Record<string, unknown> }
 ) => Promise<GraphqlResponse<T>>;
 
-type PickerSelection = {
-  id: string;
-  title: string;
-  handle: string;
-};
-
-type ResourcePickerFn = (options: {
-  type: 'product';
-  multiple: boolean;
-  action: 'select';
-  selectionIds: Array<{ id: string }>;
-  filter: { draft: boolean; archived: boolean };
-}) => Promise<PickerSelection[]>;
-
 export function useProductPicker() {
-  const { resourcePicker, query } = useApi() as {
-    resourcePicker?: unknown;
-    query: QueryFn;
-  };
-
   const pickProducts = useCallback(async (selectedIds: string[] = []): Promise<PickedProduct[]> => {
     try {
-      if (typeof resourcePicker !== 'function') {
+      if (typeof shopify.resourcePicker !== 'function') {
         return [];
       }
 
-      const selected = await (resourcePicker as ResourcePickerFn)({
+      const selected = await (shopify.resourcePicker as any)({
         type: 'product',
         multiple: true,
         action: 'select',
@@ -60,11 +40,10 @@ export function useProductPicker() {
 
       if (!selected || selected.length === 0) return [];
 
-      // Fetch variant details + images for selected products
-      const productIds = selected.map((p) => p.id);
-      const productMeta = await fetchProductMeta(query, productIds);
+      const productIds = selected.map((p: any) => p.id);
+      const productMeta = await fetchProductMeta(shopify.query.bind(shopify), productIds);
 
-      return selected.map((product) => {
+      return selected.map((product: any) => {
         const meta = productMeta.get(product.id);
         return {
           id: product.id,
@@ -78,7 +57,7 @@ export function useProductPicker() {
       console.error('Product picker error:', e);
       return [];
     }
-  }, [resourcePicker, query]);
+  }, []);
 
   interface ProductMetaResult {
     variants: PickedVariant[];
@@ -145,7 +124,6 @@ export function useProductPicker() {
     return map;
   };
 
-  // Backward-compat wrapper for GroupCard hydration
   const fetchVariantsForProducts = async (
     queryFn: QueryFn,
     productIds: string[]
@@ -160,4 +138,3 @@ export function useProductPicker() {
 
   return { pickProducts, fetchVariantsForProducts, fetchProductMeta };
 }
-

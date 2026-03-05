@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useApi } from '@shopify/ui-extensions-react/admin';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { BundleConfig } from '../utils/types';
 import {
   createEmptyBundleConfig,
@@ -8,7 +7,6 @@ import {
 } from '../../../../shared/bundle-domain';
 
 export function useBundleConfig(productId: string) {
-  const { query } = useApi();
   const [config, setConfig] = useState<BundleConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -18,26 +16,23 @@ export function useBundleConfig(productId: string) {
 
   const getNamespace = async () => {
     if (appNamespaceRef.current) return appNamespaceRef.current;
-    
-    // Fetch the app ID to construct the proper namespace (app--APP_ID)
-    const appRes = await query<any>(`
+
+    const appRes = await shopify.query<any>(`
       query {
         app {
           id
         }
       }
     `);
-    
+
     const appIdGid = appRes.data?.app?.id;
     if (appIdGid) {
-      // Extract the numerical ID from gid://shopify/App/123456
       const numericId = appIdGid.split('/').pop();
       appNamespaceRef.current = `app--${numericId}`;
     } else {
-      // Fallback
-      appNamespaceRef.current = "app--product-group-bundler"; 
+      appNamespaceRef.current = "app--product-group-bundler";
     }
-    
+
     return appNamespaceRef.current;
   };
 
@@ -46,9 +41,8 @@ export function useBundleConfig(productId: string) {
     setError(null);
     try {
       const namespace = await getNamespace();
-      // Strip transient fields (like _variants) before saving
       const cleanConfig: BundleConfig = stripTransientBundleFields(newConfig);
-      const res = await query<any>(`
+      const res = await shopify.query<any>(`
         mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
           metafieldsSet(metafields: $metafields) {
             metafields {
@@ -73,7 +67,7 @@ export function useBundleConfig(productId: string) {
             ]
           }
         });
-      
+
       if (res.data?.metafieldsSet?.userErrors?.length) {
         throw new Error(res.data.metafieldsSet.userErrors[0].message);
       }
@@ -85,14 +79,14 @@ export function useBundleConfig(productId: string) {
     } finally {
       if (!isSilentAutoSave) setIsSaving(false);
     }
-  }, [productId, query]);
+  }, [productId]);
 
   const fetchConfig = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const namespace = await getNamespace();
-      const res = await query<any>(`
+      const res = await shopify.query<any>(`
         query GetBundleGroups($productId: ID!, $namespace: String!) {
           product(id: $productId) {
             metafield(namespace: $namespace, key: "bundle_groups") {
@@ -101,12 +95,11 @@ export function useBundleConfig(productId: string) {
             }
           }
         }`, { variables: { productId, namespace } });
-        
+
       if (res.data?.product?.metafield?.value) {
         let parsedConfig =
           parseBundleConfig(res.data.product.metafield.value) ?? createEmptyBundleConfig();
-        
-        // Auto-resolve missing handles
+
         const productsMissingHandles = [];
         for (const group of parsedConfig.groups) {
           for (const product of group.products) {
@@ -120,7 +113,7 @@ export function useBundleConfig(productId: string) {
           setIsResolving(true);
           const idsToFetch = productsMissingHandles.map(p => `"${p.productId}"`).join(', ');
           try {
-            const handleRes = await query<any>(`
+            const handleRes = await shopify.query<any>(`
               query GetHandles {
                 nodes(ids: [${idsToFetch}]) {
                   ... on Product {
@@ -155,7 +148,6 @@ export function useBundleConfig(productId: string) {
               }))
             };
 
-            // Silently save the resolved handles back to the metafield
             if (needsSave) {
               await saveConfig(parsedConfig, true);
             }
@@ -165,7 +157,7 @@ export function useBundleConfig(productId: string) {
             setIsResolving(false);
           }
         }
-        
+
         setConfig(parsedConfig);
       } else {
         setConfig(createEmptyBundleConfig());
@@ -177,7 +169,7 @@ export function useBundleConfig(productId: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [productId, query, saveConfig]);
+  }, [productId, saveConfig]);
 
   useEffect(() => {
     fetchConfig();
