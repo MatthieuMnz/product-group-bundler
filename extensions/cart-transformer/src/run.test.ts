@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { run } from "./run";
-import { CurrencyCode, type RunInput } from "../generated/api";
+import type { RunInput } from "../generated/api";
+
+const USD = "USD" as RunInput["cart"]["lines"][number]["cost"]["amountPerQuantity"]["currencyCode"];
 
 describe("cart-transformer", () => {
   it("should return no operations if there are no bundled products", () => {
@@ -11,7 +13,7 @@ describe("cart-transformer", () => {
             id: "gid://shopify/CartLine/1",
             quantity: 1,
             cost: {
-              amountPerQuantity: { amount: "10.00", currencyCode: CurrencyCode.Usd },
+              amountPerQuantity: { amount: "10.00", currencyCode: USD },
             },
             merchandise: {
               __typename: "ProductVariant",
@@ -56,7 +58,7 @@ describe("cart-transformer", () => {
             id: "gid://shopify/CartLine/1",
             quantity: 1,
             cost: {
-              amountPerQuantity: { amount: "10.00", currencyCode: CurrencyCode.Usd },
+              amountPerQuantity: { amount: "10.00", currencyCode: USD },
             },
             merchandise: {
               __typename: "ProductVariant",
@@ -76,7 +78,7 @@ describe("cart-transformer", () => {
             bundleParentProductId: { value: "gid://shopify/Product/1" },
             bundleGroupId: { value: "group-1" },
             cost: {
-              amountPerQuantity: { amount: "5.00", currencyCode: CurrencyCode.Usd },
+              amountPerQuantity: { amount: "5.00", currencyCode: USD },
             },
             merchandise: {
               __typename: "ProductVariant",
@@ -103,7 +105,7 @@ describe("cart-transformer", () => {
             id: "gid://shopify/CartLine/1",
             quantity: 1,
             cost: {
-              amountPerQuantity: { amount: "10.00", currencyCode: CurrencyCode.Usd },
+              amountPerQuantity: { amount: "10.00", currencyCode: USD },
             },
             merchandise: {
               __typename: "ProductVariant",
@@ -122,7 +124,7 @@ describe("cart-transformer", () => {
             bundleParentProductId: { value: "gid://shopify/Product/1" },
             bundleGroupId: { value: "group-1" },
             cost: {
-              amountPerQuantity: { amount: "5.00", currencyCode: CurrencyCode.Usd },
+              amountPerQuantity: { amount: "5.00", currencyCode: USD },
             },
             merchandise: {
               __typename: "ProductVariant",
@@ -166,7 +168,7 @@ describe("cart-transformer", () => {
             id: "gid://shopify/CartLine/parent",
             quantity: 1,
             cost: {
-              amountPerQuantity: { amount: "10.00", currencyCode: CurrencyCode.Usd },
+              amountPerQuantity: { amount: "10.00", currencyCode: USD },
             },
             merchandise: {
               __typename: "ProductVariant",
@@ -185,7 +187,7 @@ describe("cart-transformer", () => {
             bundleParentProductId: { value: "gid://shopify/Product/1" },
             bundleGroupId: { value: "group-1" },
             cost: {
-              amountPerQuantity: { amount: "8.00", currencyCode: CurrencyCode.Usd },
+              amountPerQuantity: { amount: "8.00", currencyCode: USD },
             },
             merchandise: {
               __typename: "ProductVariant",
