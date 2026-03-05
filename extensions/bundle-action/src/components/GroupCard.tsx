@@ -138,7 +138,7 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
 
         {group.products.length > 0 && <Divider />}
 
-        <BlockStack gap="small">
+        <BlockStack gap="base">
           {group.products.map((product, index) => (
             <ProductEntry
               key={product.productId || index}
