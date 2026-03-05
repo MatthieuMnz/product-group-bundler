@@ -5,6 +5,7 @@ interface BundleProduct {
   handle?: string;
   variantIds: string[];
   discountValue: number;
+  variantDiscounts?: { id: string; discountValue: number }[];
 }
 
 interface BundleGroup {
@@ -50,9 +51,10 @@ export function run(input: RunInput): FunctionRunResult {
   for (const line of input.cart.lines) {
     const parentIdAttr = line.bundleParentProductId?.value;
     const groupIdAttr = line.bundleGroupId?.value;
+    const merchandise = line.merchandise;
 
     if (!parentIdAttr || !groupIdAttr) continue;
-    if (line.merchandise.__typename !== "ProductVariant") continue;
+    if (merchandise.__typename !== "ProductVariant") continue;
 
     // Validate: parent must be in the cart
     if (!parentProductIdsInCart.has(parentIdAttr)) continue;
@@ -66,7 +68,7 @@ export function run(input: RunInput): FunctionRunResult {
     if (!group) continue;
 
     // Find this product in the group
-    const childProductId = line.merchandise.product.id;
+    const childProductId = merchandise.product.id;
     const bundleProduct = group.products.find((p) => p.productId === childProductId);
     if (!bundleProduct) continue;
 
@@ -74,13 +76,22 @@ export function run(input: RunInput): FunctionRunResult {
     if (
       bundleProduct.variantIds &&
       bundleProduct.variantIds.length > 0 &&
-      !bundleProduct.variantIds.includes(line.merchandise.id)
+      !bundleProduct.variantIds.includes(merchandise.id)
     ) {
       continue;
     }
 
     // Calculate and apply discount
-    const discountValue = bundleProduct.discountValue;
+    let discountValue = bundleProduct.discountValue;
+
+    if (bundleProduct.variantDiscounts) {
+      const variantDiscount = bundleProduct.variantDiscounts.find(
+        (v) => v.id === merchandise.id || v.id === merchandise.id.split('/').pop()
+      );
+      if (variantDiscount) {
+        discountValue = variantDiscount.discountValue;
+      }
+    }
 
     // Skip if no discount to apply
     if (!discountValue || discountValue <= 0) continue;

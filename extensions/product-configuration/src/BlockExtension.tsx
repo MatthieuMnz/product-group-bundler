@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   reactExtension,
   useApi,
@@ -30,7 +29,7 @@ function App() {
     return (
       <AdminBlock title={i18n.translate('blockTitle')}>
         <BlockStack gap="base">
-          <ProgressIndicator />
+          <ProgressIndicator size="base" />
         </BlockStack>
       </AdminBlock>
     );
@@ -48,16 +47,16 @@ function App() {
     <AdminBlock title={i18n.translate('blockTitle')}>
       <BlockStack gap="base">
         {/* Top-level summary */}
-        <Box padding="base" paddingBlock="small" borderWidth="small" borderRadius="base" borderColor="subdued" background="bg-surface-secondary">
+        <Box padding="base" paddingBlock="small" background="subdued">
           <InlineStack blockAlignment="center" inlineAlignment="space-between">
-            <BlockStack gap="extraTight">
+            <BlockStack gap="small">
               <InlineStack gap="small" blockAlignment="center">
                 <Text fontWeight="bold">{groupCount}</Text>
-                <Text appearance="subdued">
+                <Text>
                   {groupCount === 1 ? i18n.translate('name') : i18n.translate('blockTitle')}
                 </Text>
               </InlineStack>
-              <Text size="small" appearance="subdued">
+              <Text>
                 {productCount} {productCount === 1 ? i18n.translate('product') : i18n.translate('products')}
               </Text>
             </BlockStack>
@@ -75,9 +74,6 @@ function App() {
               <Box 
                 key={group.id} 
                 padding="base"
-                borderWidth="small"
-                borderColor="subdued"
-                borderRadius="base"
               >
                 
                 <BlockStack gap="small">
@@ -91,27 +87,22 @@ function App() {
                     {group.products.slice(0, 3).map((product, pIdx) => (
                       <Box 
                         key={`${group.id}-p-${pIdx}`} 
-                        borderWidth="small" 
-                        borderColor="subdued" 
-                        borderRadius="base"
-                        minBlockSize="44px"
-                        minInlineSize="44px"
-                        maxBlockSize="64px"
-                        maxInlineSize="64px"
-                        overflow="hidden"
+                        minBlockSize={44}
+                        minInlineSize={44}
+                        maxBlockSize={64}
+                        maxInlineSize={64}
                       >
-                        {product._imageUrl ? (
+                        {(product as any)._imageUrl ? (
                           <Image
-                            source={product._imageUrl}
-                            alt={product.title || ''}
-                            fit="cover"
+                            source={(product as any)._imageUrl}
+                            alt={(product as any).title || ''}
                           />
                         ) : (
                           /* Fallback placeholder */
                           <Box 
                             padding="base" 
-                            minBlockSize="44px" 
-                            minInlineSize="44px"
+                            minBlockSize={44} 
+                            minInlineSize={44}
                           />
                         )}
                       </Box>
@@ -127,7 +118,7 @@ function App() {
             
             {groupCount > 2 && (
               <Box paddingBlockStart="base">
-                <Text size="small" appearance="subdued">
+                <Text>
                   +{groupCount - 2} more groups
                 </Text>
               </Box>

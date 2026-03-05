@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   reactExtension,
   useApi,
@@ -38,7 +37,7 @@ function App() {
     return (
       <AdminAction title={i18n.translate('blockTitle')} primaryAction={<Button disabled>{i18n.translate('save')}</Button>}>
         <BlockStack gap="base">
-          <ProgressIndicator />
+          <ProgressIndicator size="base" />
         </BlockStack>
       </AdminAction>
     );
@@ -128,7 +127,7 @@ function App() {
     <AdminAction
       title={i18n.translate('blockTitle')}
       primaryAction={
-        <Button variant="primary" loading={isSaving} onClick={handleSave}>
+        <Button variant="primary" disabled={isSaving} onClick={handleSave}>
           {i18n.translate('save')}
         </Button>
       }
@@ -139,7 +138,7 @@ function App() {
       <BlockStack gap="base">
         {errors.length > 0 && (
           <Banner tone="critical">
-            <BlockStack gap="extraTight">
+            <BlockStack gap="small">
               {errors.map((err, i) => (
                 <Text key={i}>• {err}</Text>
               ))}
@@ -149,7 +148,7 @@ function App() {
 
         {warnings.length > 0 && (
           <Banner tone="warning">
-            <BlockStack gap="extraTight">
+            <BlockStack gap="small">
               {warnings.map((w, i) => (
                 <Text key={i}>⚠ {w}</Text>
               ))}

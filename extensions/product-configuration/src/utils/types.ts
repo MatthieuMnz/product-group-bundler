@@ -4,6 +4,7 @@ export interface BundleProduct {
   title?: string;
   variantIds: string[];
   discountValue: number;
+  variantDiscounts?: { id: string; discountValue: number }[];
 }
 
 export interface BundleGroup {

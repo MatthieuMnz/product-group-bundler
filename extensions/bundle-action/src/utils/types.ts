@@ -11,6 +11,8 @@ export interface BundleProduct {
   title?: string;
   variantIds: string[];
   discountValue: number;
+  /** Custom discounts for specific variants */
+  variantDiscounts?: { id: string; discountValue: number }[];
   /** Transient — populated at runtime for UI, not persisted to metafield */
   _variants?: VariantInfo[];
   /** Transient — product featured image URL for admin preview */

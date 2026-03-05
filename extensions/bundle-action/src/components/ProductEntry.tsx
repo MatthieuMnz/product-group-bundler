@@ -25,12 +25,27 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
   };
 
   const handleVariantToggle = (variantId: string, checked: boolean) => {
-    const current = product.variantIds || [];
+    const current = Array.isArray(product.variantIds) ? product.variantIds : [];
+    const currentDiscounts = Array.isArray(product.variantDiscounts) ? product.variantDiscounts : [];
     if (checked) {
       onChange({ variantIds: [...current, variantId] });
     } else {
-      onChange({ variantIds: current.filter(id => id !== variantId) });
+      onChange({ 
+        variantIds: current.filter(id => id !== variantId),
+        variantDiscounts: currentDiscounts.filter(vd => vd.id !== variantId)
+      });
     }
+  };
+
+  const handleVariantDiscountChange = (variantId: string, value: number) => {
+    const currentDiscounts = Array.isArray(product.variantDiscounts) ? [...product.variantDiscounts] : [];
+    const index = currentDiscounts.findIndex(vd => vd.id === variantId);
+    if (index >= 0) {
+      currentDiscounts[index] = { id: variantId, discountValue: value };
+    } else {
+      currentDiscounts.push({ id: variantId, discountValue: value });
+    }
+    onChange({ variantDiscounts: currentDiscounts });
   };
 
   const variants = product._variants || [];
@@ -123,14 +138,50 @@ export function ProductEntry({ product, onChange, onRemove }: ProductEntryProps)
                 {showVariantPicker && (
                   <Box paddingBlockStart="small" paddingInlineStart="base">
                     <BlockStack gap="tight">
-                      {variants.map(v => (
-                        <Checkbox
-                          key={v.id}
-                          label={`${v.title}${v.price ? ` — $${v.price}` : ''}`}
-                          checked={product.variantIds?.includes(v.id) || false}
-                          onChange={(checked: boolean) => handleVariantToggle(v.id, checked)}
-                        />
-                      ))}
+                      {variants.map(v => {
+                        const isChecked = Array.isArray(product.variantIds) && product.variantIds.includes(v.id);
+                        
+                        let specDiscount = product.discountValue;
+                        if (Array.isArray(product.variantDiscounts)) {
+                          const found = product.variantDiscounts.find(vd => vd.id === v.id);
+                          if (found) specDiscount = found.discountValue;
+                        }
+
+                        const vPrice = v.price ? parseFloat(v.price) : null;
+                        const vBundlePrice = vPrice !== null ? Math.max(0, vPrice - specDiscount) : null;
+                        
+                        return (
+                          <BlockStack gap="extraTight" key={v.id}>
+                            <Checkbox
+                              label={`${v.title}${v.price ? ` — $${v.price}` : ''}`}
+                              checked={isChecked}
+                              onChange={(checked: boolean) => handleVariantToggle(v.id, checked)}
+                            />
+                            {isChecked && (
+                              <Box paddingInlineStart="large" paddingBlockEnd="small">
+                                <InlineStack gap="base" blockAlignment="center">
+                                  <Box maxInlineSize="120px">
+                                    <NumberField
+                                      label={i18n.translate('discountValue') || 'Discount'}
+                                      value={specDiscount}
+                                      onChange={(val: string | number) => handleVariantDiscountChange(v.id, Number(val) || 0)}
+                                      min={0}
+                                    />
+                                  </Box>
+                                  {vBundlePrice !== null && (
+                                    <BlockStack gap="extraTight">
+                                      <Text size="small" appearance="subdued">{i18n.translate('bundlePrice') || 'Bundle price'}</Text>
+                                      <Text appearance={specDiscount > 0 ? 'success' : 'default'} fontWeight={specDiscount > 0 ? 'bold' : 'normal'}>
+                                        ${vBundlePrice.toFixed(2)}
+                                      </Text>
+                                    </BlockStack>
+                                  )}
+                                </InlineStack>
+                              </Box>
+                            )}
+                          </BlockStack>
+                        );
+                      })}
                     </BlockStack>
                   </Box>
                 )}

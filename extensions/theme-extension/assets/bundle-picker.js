@@ -125,10 +125,19 @@ class PgbBundlePicker extends HTMLElement {
 
                 // Resolve display values: prefer AJAX data, fall back to config-embedded data
                 const productTitle = hasAjaxData ? data.title : (prod.title || prod.handle);
+                let discount = prod.discountValue || 0;
+
+                // If there's a variant-specific discount for the default variant, use it initially
+                if (defaultVariant && Array.isArray(prod.variantDiscounts)) {
+                    const vd = prod.variantDiscounts.find(v => v.id === `gid://shopify/ProductVariant/${defaultVariant.id}` || v.id === String(defaultVariant.id));
+                    if (vd) {
+                        discount = vd.discountValue;
+                    }
+                }
+
                 const origPrice = hasAjaxData
                     ? (defaultVariant.price / 100).toFixed(2)
                     : (prod._price || '0.00');
-                const discount = prod.discountValue || 0;
                 const newPrice = Math.max(0, parseFloat(origPrice) - discount).toFixed(2);
 
                 // Resolve image: prefer AJAX data, fall back to config snapshot
@@ -180,8 +189,11 @@ class PgbBundlePicker extends HTMLElement {
 
                 // Variant selector (only when AJAX data provides variant details)
                 if (hasMultipleVariants && !isEntirelyOutOfStock) {
+                    // Stringify variant discounts to pass to the client select
+                    const variantDiscountsArr = Array.isArray(prod.variantDiscounts) ? prod.variantDiscounts : [];
+                    const variantDiscountsJson = JSON.stringify(variantDiscountsArr).replace(/"/g, '&quot;');
                     html += `
-            <select class="pgb-variant-selector" data-product-handle="${prod.handle}" data-discount="${prod.discountValue}" data-currency="${currencySymbol}">`;
+            <select class="pgb-variant-selector" data-product-handle="${prod.handle}" data-base-discount="${prod.discountValue}" data-variant-discounts="${variantDiscountsJson}" data-currency="${currencySymbol}">`;
                     allowedVariants.forEach((v) => {
                         const vDisabled = !v.available ? ' disabled' : '';
                         const vSelected = v.id === defaultVariant.id ? ' selected' : '';
@@ -211,11 +223,19 @@ class PgbBundlePicker extends HTMLElement {
                 const checkbox = card.querySelector('.pgb-checkbox');
                 const selectedOption = sel.options[sel.selectedIndex];
                 const variantPrice = parseFloat(selectedOption.dataset.price) / 100;
-                const discount = parseFloat(sel.dataset.discount) || 0;
+
+                let discount = parseFloat(sel.dataset.baseDiscount) || 0;
+                const variantDiscounts = JSON.parse(sel.dataset.variantDiscounts || '[]');
+                const vd = variantDiscounts.find(v => v.id === `gid://shopify/ProductVariant/${sel.value}` || v.id === sel.value);
+                if (vd) {
+                    discount = vd.discountValue;
+                }
+
                 const currency = sel.dataset.currency || '$';
 
                 // Update the variant ID on the checkbox
                 checkbox.setAttribute('data-variant-id', sel.value);
+                checkbox.setAttribute('data-discount', discount);
 
                 // Update displayed prices
                 const oldPriceEl = card.querySelector('.pgb-old-price');
