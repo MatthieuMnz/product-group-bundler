@@ -23,12 +23,16 @@ interface BundleConfig {
 export function run(input: RunInput): FunctionRunResult {
   const operations: CartOperation[] = [];
 
-  // Build a map of product GID → metafield value for all products in cart
+  // Build a map of product GID → config and record in-cart status natively in one pass
   const parentMetafields = new Map<string, BundleConfig>();
+  const parentProductIdsInCart = new Set<string>();
+
   for (const line of input.cart.lines) {
     if (line.merchandise.__typename === "ProductVariant") {
+      parentProductIdsInCart.add(line.merchandise.product.id);
+      
       const metafield = line.merchandise.product.bundleGroups;
-      if (metafield?.value) {
+      if (metafield?.value && !parentMetafields.has(line.merchandise.product.id)) {
         try {
           const config: BundleConfig = JSON.parse(metafield.value);
           parentMetafields.set(line.merchandise.product.id, config);
@@ -36,14 +40,6 @@ export function run(input: RunInput): FunctionRunResult {
           // Invalid JSON
         }
       }
-    }
-  }
-
-  // Check if parent products are actually in the cart
-  const parentProductIdsInCart = new Set<string>();
-  for (const line of input.cart.lines) {
-    if (line.merchandise.__typename === "ProductVariant") {
-      parentProductIdsInCart.add(line.merchandise.product.id);
     }
   }
 

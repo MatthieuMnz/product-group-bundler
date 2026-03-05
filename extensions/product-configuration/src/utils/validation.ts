@@ -1,4 +1,4 @@
-import { BundleConfig, BundleGroup } from "./types";
+import { BundleConfig } from "./types";
 
 export function generateId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID 

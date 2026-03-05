@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BlockStack, Button, Text, useApi } from '@shopify/ui-extensions-react/admin';
 
 export function EmptyState({ onAdd }: { onAdd: () => void }) {

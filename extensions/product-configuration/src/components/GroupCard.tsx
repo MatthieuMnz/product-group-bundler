@@ -1,9 +1,7 @@
-// @ts-nocheck
-import { BlockStack, Button, InlineStack, Text, TextField, Divider } from '@shopify/ui-extensions-react/admin';
+import { BlockStack, Button, InlineStack, Text, TextField, Divider, useApi } from '@shopify/ui-extensions-react/admin';
 import { BundleGroup, BundleProduct } from '../utils/types';
 import { ProductEntry } from './ProductEntry';
 import { useProductPicker } from '../hooks/useProductPicker';
-import { useApi } from '@shopify/ui-extensions-react/admin';
 
 interface GroupCardProps {
   group: BundleGroup;
@@ -50,17 +48,16 @@ export function GroupCard({ group, currentProductId, isExpanded, onToggle, onCha
 
     onChange({ products: [...group.products, ...newProducts] });
   };
-
   // Collapsed: compact summary row
   if (!isExpanded) {
     return (
-      <BlockStack gap="extraTight">
+      <BlockStack gap="small">
         <InlineStack gap="base" blockAlignment="center" inlineAlignment="space-between">
           <InlineStack gap="base" blockAlignment="center">
             <Button variant="tertiary" onClick={onToggle}>▸</Button>
             <Text fontWeight="bold">{group.name || i18n.translate('unnamedGroup')}</Text>
           </InlineStack>
-          <Text appearance="subdued">{group.products.length} {group.products.length !== 1 ? i18n.translate('products') : i18n.translate('product')}</Text>
+          <Text>{group.products.length} {group.products.length !== 1 ? i18n.translate('products') : i18n.translate('product')}</Text>
         </InlineStack>
         <Divider />
       </BlockStack>

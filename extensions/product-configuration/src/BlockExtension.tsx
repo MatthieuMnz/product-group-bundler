@@ -10,7 +10,6 @@ import {
   ProgressIndicator,
   Box,
   Image,
-  Divider,
 } from '@shopify/ui-extensions-react/admin';
 import { useBundleConfig } from './hooks/useBundleConfig';
 
@@ -20,8 +19,8 @@ export default reactExtension(TARGET, () => <App />);
 
 function App() {
   const api = useApi();
-  const { data, i18n, navigation } = api as any;
-  const productId = (data as any)?.selected?.[0]?.id || "gid://shopify/Product/0";
+  const { data, i18n, navigation } = api as Record<string, any>;
+  const productId = (data as Record<string, any>)?.selected?.[0]?.id || "gid://shopify/Product/0";
 
   const { config, isLoading } = useBundleConfig(productId);
 
@@ -47,7 +46,7 @@ function App() {
     <AdminBlock title={i18n.translate('blockTitle')}>
       <BlockStack gap="base">
         {/* Top-level summary */}
-        <Box padding="base" paddingBlock="small" background="subdued">
+        <Box padding="base" paddingBlock="small">
           <InlineStack blockAlignment="center" inlineAlignment="space-between">
             <BlockStack gap="small">
               <InlineStack gap="small" blockAlignment="center">
@@ -70,7 +69,7 @@ function App() {
         {/* Detailed group previews */}
         {groupCount > 0 && (
           <BlockStack gap="base">
-            {config?.groups.slice(0, 2).map((group, index) => (
+            {config?.groups.slice(0, 2).map((group) => (
               <Box 
                 key={group.id} 
                 padding="base"
@@ -92,10 +91,10 @@ function App() {
                         maxBlockSize={64}
                         maxInlineSize={64}
                       >
-                        {(product as any)._imageUrl ? (
+                        {(product as Record<string, any>)._imageUrl ? (
                           <Image
-                            source={(product as any)._imageUrl}
-                            alt={(product as any).title || ''}
+                            source={(product as Record<string, any>)._imageUrl}
+                            alt={(product as Record<string, any>).title || ''}
                           />
                         ) : (
                           /* Fallback placeholder */

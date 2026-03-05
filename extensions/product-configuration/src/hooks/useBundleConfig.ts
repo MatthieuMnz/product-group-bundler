@@ -8,11 +8,11 @@ export function useBundleConfig(productId: string) {
   const [isLoading, setIsLoading] = useState(true);
   const appNamespaceRef = useRef<string | null>(null);
 
-  const getNamespace = async () => {
+  const getNamespace = useCallback(async () => {
     if (appNamespaceRef.current) return appNamespaceRef.current;
     
     // Fetch the app ID to construct the proper namespace (app--APP_ID)
-    const appRes = await query<any>(`
+    const appRes = await query<Record<string, any>>(`
       query {
         app {
           id
@@ -31,7 +31,7 @@ export function useBundleConfig(productId: string) {
     }
     
     return appNamespaceRef.current;
-  };
+  }, [query]);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -39,7 +39,7 @@ export function useBundleConfig(productId: string) {
       const namespace = await getNamespace();
       
       // 1. Fetch the metafield config first
-      const res = await query<any>(`
+      const res = await query<Record<string, any>>(`
         query GetBundleGroups($productId: ID!, $namespace: String!) {
           product(id: $productId) {
             metafield(namespace: $namespace, key: "bundle_groups") {
@@ -50,16 +50,16 @@ export function useBundleConfig(productId: string) {
         }`, { variables: { productId, namespace } });
         
       if (res.data?.product?.metafield?.value) {
-        let parsedConfig = JSON.parse(res.data.product.metafield.value);
+        const parsedConfig = JSON.parse(res.data.product.metafield.value);
         
         // 2. Extract up to 3 product IDs from EACH of the first 2 groups to fetch images for the preview
         const previewGids: string[] = [];
-        parsedConfig.groups.slice(0, 2).forEach((g: any) => {
-          g.products.slice(0, 3).forEach((p: any) => previewGids.push(p.productId));
+        parsedConfig.groups.slice(0, 2).forEach((g: Record<string, any>) => {
+          g.products.slice(0, 3).forEach((p: Record<string, any>) => previewGids.push(p.productId));
         });
         
         if (previewGids.length > 0) {
-          const imageRes = await query<any>(`
+          const imageRes = await query<Record<string, any>>(`
             query GetProductImages($ids: [ID!]!) {
               nodes(ids: $ids) {
                 ... on Product {
@@ -74,7 +74,7 @@ export function useBundleConfig(productId: string) {
             
           if (imageRes.data?.nodes) {
             const imageMap = new Map<string, { title: string, imageUrl?: string }>();
-            imageRes.data.nodes.forEach((node: any) => {
+            imageRes.data.nodes.forEach((node: Record<string, any>) => {
               if (node && node.id) {
                 imageMap.set(node.id, {
                   title: node.title,
@@ -84,9 +84,9 @@ export function useBundleConfig(productId: string) {
             });
             
             // 3. Hydrate the config with images for the preview
-            parsedConfig.groups = parsedConfig.groups.map((g: any) => ({
+            parsedConfig.groups = parsedConfig.groups.map((g: Record<string, any>) => ({
               ...g,
-              products: g.products.map((p: any) => {
+              products: g.products.map((p: Record<string, any>) => {
                 const meta = imageMap.get(p.productId);
                 return {
                   ...p,
@@ -108,7 +108,7 @@ export function useBundleConfig(productId: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [productId, query]);
+  }, [productId, query, getNamespace]);
 
   useEffect(() => {
     fetchConfig();
@@ -117,7 +117,7 @@ export function useBundleConfig(productId: string) {
   const saveConfig = async (newConfig: BundleConfig) => {
     try {
       const namespace = await getNamespace();
-      const res = await query<any>(`
+      const res = await query<Record<string, any>>(`
         mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
           metafieldsSet(metafields: $metafields) {
             metafields {
