@@ -157,20 +157,18 @@ class PgbBundlePicker extends HTMLElement {
     renderSkeleton(config, heading) {
         const groupCount = config.groups ? config.groups.length : 1;
         let html = '';
-        if (heading) {
-            html += `<h4>${escapeHtml(heading)}</h4>`;
-        }
         html += '<div class="pgb-groups-wrapper">';
         for (let g = 0; g < groupCount; g++) {
             const productCount = config.groups[g]?.products?.length || 2;
-            html += '<div class="pgb-group"><div class="pgb-skeleton pgb-skeleton-title"></div><div class="pgb-group-items">';
+            html += '<div class="pgb-group"><div class="pgb-skeleton pgb-skeleton-title"></div><div class="pgb-group-items pgb-group-items--grid">';
             for (let p = 0; p < productCount; p++) {
                 html += `<div class="pgb-product-card pgb-skeleton-card">
-                    <div class="pgb-skeleton pgb-skeleton-checkbox"></div>
-                    <div class="pgb-skeleton pgb-skeleton-image"></div>
+                    <div class="pgb-product-image-container">
+                        <div class="pgb-skeleton pgb-skeleton-image"></div>
+                    </div>
                     <div class="pgb-product-info">
-                        <div class="pgb-skeleton pgb-skeleton-text" style="width:60%"></div>
-                        <div class="pgb-skeleton pgb-skeleton-text" style="width:30%"></div>
+                        <div class="pgb-skeleton pgb-skeleton-text" style="width:80%; margin: 0 auto 8px auto;"></div>
+                        <div class="pgb-skeleton pgb-skeleton-text" style="width:50%; margin: 0 auto;"></div>
                     </div>
                 </div>`;
             }
@@ -182,10 +180,6 @@ class PgbBundlePicker extends HTMLElement {
 
     renderGroups(config, productData, locale, currencySymbol, customHeading, mainProductGid) {
         let html = ``;
-        if (customHeading) {
-            html += `<h4>${escapeHtml(customHeading)}</h4>`;
-        }
-
         html += `<p class="pgb-error-message"${this.errorMessage ? '' : ' hidden'}>${escapeHtml(this.errorMessage)}</p>`;
 
         // Try to get translations from a hidden element if provided by the theme, otherwise fallback
@@ -196,8 +190,10 @@ class PgbBundlePicker extends HTMLElement {
         config.groups.forEach((group) => {
             const title = group.name || 'Bundle Group';
             html += `<div class="pgb-group" data-group-id="${group.id}">
-      <h3 class="pgb-group-title">${escapeHtml(title)}</h3>
-      <div class="pgb-group-items">`;
+      <h3 class="pgb-group-title">${escapeHtml(title)}</h3>`;
+
+            const simpleCards = [];
+            const fullWidthCards = [];
 
             group.products.forEach(prod => {
                 const data = productData[prod.handle];
@@ -250,8 +246,9 @@ class PgbBundlePicker extends HTMLElement {
                     } else if (data.images && data.images.length > 0) {
                         imageUrl = data.images[0] || imageUrl;
                     }
-                    if (imageUrl && !imageUrl.includes('width=') && !imageUrl.includes('_100x')) {
-                        imageUrl = imageUrl.replace(/(\.[a-z0-9]+)$/i, '_100x$1');
+                    if (imageUrl && !imageUrl.includes('width=') && !imageUrl.includes('_100x') && !imageUrl.includes('_200x')) {
+                        // We use a slightly larger image for centered grid view, e.g. 200x.
+                        imageUrl = imageUrl.replace(/(\.[a-z0-9]+)$/i, '_200x$1');
                     }
                 } else {
                     imageUrl = prod._imageUrl || '';
@@ -260,10 +257,11 @@ class PgbBundlePicker extends HTMLElement {
                 // Resolve variant ID for the checkbox
                 const variantId = defaultVariant ? defaultVariant.id : '';
 
-                const cardClass = isEntirelyOutOfStock ? 'pgb-product-card pgb-product-card--unavailable' : 'pgb-product-card';
+                let cardClass = isEntirelyOutOfStock ? 'pgb-product-card pgb-product-card--unavailable' : 'pgb-product-card';
+                if (hasMultipleVariants) cardClass += ' pgb-product-card--full-width';
                 const disabledAttr = isEntirelyOutOfStock ? 'disabled' : '';
 
-                html += `
+                let cardHtml = `
         <label class="${cardClass}">
           <input type="checkbox" class="pgb-checkbox" 
                  data-group-id="${group.id}" 
@@ -272,11 +270,14 @@ class PgbBundlePicker extends HTMLElement {
                  data-parent-product-gid="${mainProductGid}"
                  data-discount="${discount}"
                  ${disabledAttr} />
+           <div class="pgb-check-badge">
+             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+           </div>
 `;
                 if (imageUrl) {
-                    html += `<img src="${imageUrl}" alt="${escapeHtml(productTitle)}" class="pgb-product-image" loading="lazy">`;
+                    cardHtml += `<div class="pgb-product-image-container"><img src="${imageUrl}" alt="${escapeHtml(productTitle)}" class="pgb-product-image" loading="lazy"></div>`;
                 }
-                html += `
+                cardHtml += `
           <div class="pgb-product-info">
             <span class="pgb-product-title">${escapeHtml(productTitle)}</span>
             <span class="pgb-product-price">
@@ -285,7 +286,7 @@ class PgbBundlePicker extends HTMLElement {
             </span>`;
 
                 if (isEntirelyOutOfStock) {
-                    html += `<span class="pgb-out-of-stock-badge">${tOutOfStock}</span>`;
+                    cardHtml += `<span class="pgb-out-of-stock-badge">${tOutOfStock}</span>`;
                 }
 
                 // Variant selector (only when AJAX data provides variant details)
@@ -293,24 +294,36 @@ class PgbBundlePicker extends HTMLElement {
                     // Stringify variant discounts to pass to the client select
                     const variantDiscountsArr = Array.isArray(prod.variantDiscounts) ? prod.variantDiscounts : [];
                     const variantDiscountsJson = JSON.stringify(variantDiscountsArr).replace(/"/g, '&quot;');
-                    html += `
+                    cardHtml += `
             <select class="pgb-variant-selector" data-product-handle="${prod.handle}" data-base-discount="${prod.discountValue}" data-variant-discounts="${variantDiscountsJson}" data-currency="${currencySymbol}">`;
                     allowedVariants.forEach((v) => {
                         const vDisabled = !v.available ? ' disabled' : '';
                         const vSelected = v.id === defaultVariant.id ? ' selected' : '';
                         const vLabel = v.title + (v.available ? ` — ${currencySymbol}${(toFiniteNumber(v.price, 0) / 100).toFixed(2)}` : ` (${tOutOfStock})`);
-                        html += `<option value="${v.id}" data-price="${v.price}"${vDisabled}${vSelected}>${escapeHtml(vLabel)}</option>`;
+                        cardHtml += `<option value="${v.id}" data-price="${v.price}"${vDisabled}${vSelected}>${escapeHtml(vLabel)}</option>`;
                     });
-                    html += `</select>`;
+                    cardHtml += `</select>`;
                 }
 
-                html += `
+                cardHtml += `
           </div>
         </label>
       `;
+
+                if (hasMultipleVariants) {
+                    fullWidthCards.push(cardHtml);
+                } else {
+                    simpleCards.push(cardHtml);
+                }
             });
 
-            html += `</div></div>`;
+            if (simpleCards.length > 0) {
+                html += `<div class="pgb-group-items pgb-group-items--grid">${simpleCards.join('')}</div>`;
+            }
+            if (fullWidthCards.length > 0) {
+                html += `<div class="pgb-group-items pgb-group-items--list">${fullWidthCards.join('')}</div>`;
+            }
+            html += `</div>`;
         });
 
         html += '</div>';

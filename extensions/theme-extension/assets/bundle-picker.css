@@ -75,22 +75,18 @@ pgb-bundle-picker,
   gap: var(--pgb-spacing-xl);
 }
 
-/* --- Group --- */
-.pgb-group {
-  padding: var(--pgb-spacing-lg);
-  border: 1px solid var(--pgb-border);
-  border-radius: var(--pgb-radius-md);
-  background: var(--pgb-background);
-}
-
 /* --- Group title --- */
 .pgb-group-title {
-  font-size: var(--pgb-font-size-md);
-  font-weight: var(--pgb-font-weight-bold);
-  color: var(--pgb-foreground);
-  margin: 0 0 var(--pgb-spacing-md);
-  padding-bottom: var(--pgb-spacing-sm);
-  border-bottom: 1px solid var(--pgb-border);
+  display: block;
+  width: 100%;
+  flex-basis: 100%;
+  padding: 0;
+  margin-block: 1rem 0.75rem;
+  color: rgb(var(--color-foreground-rgb));
+  font-weight: var(--font-weight-bold);
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 /* --- Group items --- */
@@ -100,17 +96,43 @@ pgb-bundle-picker,
   gap: var(--pgb-spacing-md);
 }
 
+.pgb-group-items--grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--pgb-spacing-sm);
+}
+
+.pgb-group-items--list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pgb-spacing-md);
+  margin-top: var(--pgb-spacing-lg);
+}
+
 /* --- Product card --- */
 .pgb-product-card {
+  position: relative;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   gap: var(--pgb-spacing-md);
   padding: var(--pgb-spacing-md);
   border: 1px solid var(--pgb-border);
-  border-radius: var(--pgb-radius-md);
+  border-radius: var(--pgb-radius-lg);
   background: var(--pgb-background);
   cursor: pointer;
   transition: border-color var(--pgb-transition), background-color var(--pgb-transition), box-shadow var(--pgb-transition);
+  /* Grow up to 4 per row */
+  flex: 1 1 calc(25% - (var(--pgb-spacing-md) * 3 / 4));
+  min-width: 150px;
+}
+
+.pgb-product-card--full-width {
+  flex: 1 1 100%;
+  flex-direction: row;
+  text-align: left;
 }
 
 .pgb-product-card:hover {
@@ -119,62 +141,78 @@ pgb-bundle-picker,
 }
 
 .pgb-product-card:has(input:checked) {
+  border: 2px solid var(--pgb-primary);
+  /* The red border slightly offsets dimensions; negative padding keeps layout stable or just let outline handle it. 
+     Since we use a real border, we shouldn't have layout shifts if we use `box-sizing: border-box`, 
+     but typical technique is `box-shadow` to avoid jumping. Let's use border-color and box-shadow. */
   border-color: var(--pgb-primary);
-  background-color: rgba(222, 26, 0, 0.03);
   box-shadow: 0 0 0 1px var(--pgb-primary);
 }
 
-.pgb-product-card:focus-within {
-  outline: var(--pgb-focus-outline);
-  outline-offset: var(--pgb-focus-offset);
-}
-
 /* --- Checkbox --- */
+/* Hide the native checkbox, the card itself acts as the selector */
 .pgb-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  border: 2px solid var(--pgb-border-hover);
-  border-radius: var(--pgb-radius-sm);
-  background: var(--pgb-background);
-  cursor: pointer;
-  margin-top: 2px;
-  transition: all var(--pgb-transition);
-  position: relative;
-}
-
-.pgb-checkbox:checked {
-  background-color: var(--pgb-primary);
-  border-color: var(--pgb-primary);
-}
-
-.pgb-checkbox:checked::after {
-  content: '';
   position: absolute;
-  top: 2px;
-  left: 5px;
-  width: 4px;
-  height: 8px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  margin: 0;
 }
 
-.pgb-checkbox:focus-visible {
-  outline: var(--pgb-focus-outline);
-  outline-offset: var(--pgb-focus-offset);
+/* Checkbadge (top right red circle) */
+.pgb-check-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  background-color: var(--pgb-primary);
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all var(--pgb-transition);
+  z-index: 2;
+}
+
+.pgb-product-card:has(input:checked) .pgb-check-badge {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* --- Product image thumbnail --- */
-.pgb-product-image {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  border-radius: var(--pgb-radius-sm);
-  border: 1px solid var(--pgb-border);
+.pgb-product-image-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--pgb-background);
+  border-radius: var(--pgb-radius-md);
+  margin-bottom: var(--pgb-spacing-xs);
+}
+
+.pgb-product-card--full-width .pgb-product-image-container {
+  width: 72px;
+  height: 72px;
   flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.pgb-product-image {
+  max-width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: var(--pgb-radius-sm);
+}
+
+.pgb-product-card--full-width .pgb-product-image {
+  max-height: 100%;
+  object-fit: cover;
+  width: auto;
 }
 
 /* --- Product info --- */
@@ -183,27 +221,35 @@ pgb-bundle-picker,
   display: flex;
   flex-direction: column;
   gap: var(--pgb-spacing-xs);
+  width: 100%;
 }
 
 .pgb-product-title {
   display: block;
   font-weight: var(--pgb-font-weight-medium);
-  font-size: var(--pgb-font-size-sm);
+  font-size: var(--pgb-font-size-md);
   color: var(--pgb-foreground);
+  line-height: 1.3;
 }
 
 /* --- Pricing --- */
 .pgb-product-price {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--pgb-spacing-sm);
-  font-size: var(--pgb-font-size-sm);
+  font-size: var(--pgb-font-size-md);
+  margin-top: 2px;
+}
+
+.pgb-product-card--full-width .pgb-product-price {
+  justify-content: flex-start;
 }
 
 .pgb-old-price {
   text-decoration: line-through;
   color: var(--pgb-foreground-subdued);
-  font-size: var(--pgb-font-size-xs);
+  font-size: var(--pgb-font-size-sm);
 }
 
 .pgb-new-price {
