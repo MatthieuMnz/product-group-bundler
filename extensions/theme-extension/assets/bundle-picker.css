@@ -218,7 +218,6 @@ pgb-bundle-picker,
 }
 
 .pgb-product-card:has(input:checked):not(.pgb-product-card--full-width) .pgb-product-image-container {
-  border: 2px solid var(--pgb-primary);
   border-color: var(--pgb-primary);
   box-shadow: 0 0 0 1px var(--pgb-primary);
 }

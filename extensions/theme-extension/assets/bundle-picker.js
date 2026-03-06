@@ -90,7 +90,7 @@ class PgbBundlePicker extends HTMLElement {
 
     disconnectedCallback() {
         if (this.boundForm && this.submitHandler) {
-            this.boundForm.removeEventListener('submit', this.submitHandler, true);
+            window.removeEventListener('submit', this.submitHandler, true);
         }
         this.boundForm = null;
         this.submitHandler = null;
@@ -453,7 +453,7 @@ class PgbBundlePicker extends HTMLElement {
             }
         };
 
-        this.boundForm.addEventListener('submit', this.submitHandler, true);
+        window.addEventListener('submit', this.submitHandler, true);
     }
 }
 
