@@ -106,8 +106,8 @@ pgb-bundle-picker,
 .pgb-group-items--list {
   display: flex;
   flex-direction: column;
-  gap: var(--pgb-spacing-md);
-  margin-top: var(--pgb-spacing-lg);
+  gap: var(--pgb-spacing-sm);
+  margin-top: var(--pgb-spacing-sm);
 }
 
 /* --- Product card --- */
