@@ -117,6 +117,8 @@ class PgbBundlePicker extends HTMLElement {
             this.bundleConfig = config;
             const mainProductGid = this.getAttribute('data-product-gid') || '';
             const locale = this.getAttribute('data-locale') || 'en';
+            const rawShortTitles = this.getAttribute('data-short-titles');
+            this.shortTitles = rawShortTitles ? JSON.parse(rawShortTitles) : {};
             const currencySymbol = this.getAttribute('data-currency-symbol') || '$';
             const customHeading = this.getAttribute('data-heading') || 'Bundle';
 
@@ -221,7 +223,8 @@ class PgbBundlePicker extends HTMLElement {
                 }
 
                 // Resolve display values: prefer AJAX data, fall back to config-embedded data
-                const productTitle = hasAjaxData ? data.title : (prod.title || prod.handle);
+                const baseTitle = hasAjaxData ? data.title : (prod.title || prod.handle);
+                const productTitle = this.shortTitles?.[prod.handle] || baseTitle;
                 let discount = toFiniteNumber(prod.discountValue, 0);
 
                 // If there's a variant-specific discount for the default variant, use it initially

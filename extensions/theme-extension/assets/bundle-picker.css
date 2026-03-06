@@ -88,7 +88,12 @@ pgb-bundle-picker,
   letter-spacing: -0.02em;
 }
 
-/* --- Group items --- */
+/* --- Group and items --- */
+.pgb-group {
+  container-type: inline-size;
+  container-name: bundle-group;
+}
+
 .pgb-group-items {
   display: flex;
   flex-direction: column;
@@ -96,10 +101,16 @@ pgb-bundle-picker,
 }
 
 .pgb-group-items--grid {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--pgb-spacing-sm);
+  width: 100%;
+}
+
+@container bundle-group (min-width: 590px) {
+  .pgb-group-items--grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .pgb-group-items--list {
@@ -123,15 +134,12 @@ pgb-bundle-picker,
   background: var(--pgb-background);
   cursor: pointer;
   transition: border-color var(--pgb-transition), background-color var(--pgb-transition), box-shadow var(--pgb-transition);
-  /* Grow up to 3 per row */
-  flex: 1 1 calc(33% - (var(--pgb-spacing-md) * 2 / 3));
-  min-width: 150px;
-  max-width: calc(33% - (var(--pgb-spacing-md) * 2 / 3));
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .pgb-product-card--full-width {
-  flex: 1 1 100%;
-  max-width: 100%;
   flex-direction: row;
   text-align: left;
 }

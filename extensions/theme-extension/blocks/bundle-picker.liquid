@@ -8,11 +8,30 @@
 {%- if bundle_meta.value != blank -%}
   {%- assign bundle_data = bundle_meta.value -%}
 
+  {%- assign short_titles = '' -%}
+  {%- for group in bundle_data.groups -%}
+    {%- for product in group.products -%}
+      {%- assign b_product = all_products[product.handle] -%}
+      {%- assign b_short_title = b_product.metafields.custom.short_title.value
+        | default: b_product.metafields.custom.short_title
+      -%}
+      {%- if b_short_title != blank -%}
+        {%- capture short_title_json -%}"{{ product.handle }}":{{ b_short_title | json }}{%- endcapture -%}
+        {%- if short_titles != '' -%}
+          {%- assign short_titles = short_titles | append: ',' -%}
+        {%- endif -%}
+        {%- assign short_titles = short_titles | append: short_title_json -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endfor -%}
+  {%- assign short_titles_json = '{' | append: short_titles | append: '}' -%}
+
   <pgb-bundle-picker
     class="pgb-bundle-picker"
     data-product-id="{{ product.id }}"
     data-product-gid="gid://shopify/Product/{{ product.id }}"
     data-bundle-config="{{ bundle_data | json | escape }}"
+    data-short-titles="{{ short_titles_json | escape }}"
     data-locale="{{ request.locale.iso_code }}"
     data-currency-symbol="{{ cart.currency.symbol }}"
     data-heading="{{ block.settings.heading | escape }}"
