@@ -123,13 +123,15 @@ pgb-bundle-picker,
   background: var(--pgb-background);
   cursor: pointer;
   transition: border-color var(--pgb-transition), background-color var(--pgb-transition), box-shadow var(--pgb-transition);
-  /* Grow up to 4 per row */
-  flex: 1 1 calc(25% - (var(--pgb-spacing-md) * 3 / 4));
+  /* Grow up to 3 per row */
+  flex: 1 1 calc(33% - (var(--pgb-spacing-md) * 2 / 3));
   min-width: 150px;
+  max-width: calc(33% - (var(--pgb-spacing-md) * 2 / 3));
 }
 
 .pgb-product-card--full-width {
   flex: 1 1 100%;
+  max-width: 100%;
   flex-direction: row;
   text-align: left;
 }
