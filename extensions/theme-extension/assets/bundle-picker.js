@@ -272,6 +272,9 @@ class PgbBundlePicker extends HTMLElement {
                  data-variant-id="${variantId}" 
                  data-parent-product-gid="${mainProductGid}"
                  data-discount="${discount}"
+                 data-price="${origPrice}"
+                 data-product-title="${escapeHtml(productTitle)}"
+                 data-variant-title="${escapeHtml(defaultVariant ? defaultVariant.title : '')}"
                  ${disabledAttr} />
            <div class="pgb-check-badge">
              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -303,7 +306,7 @@ class PgbBundlePicker extends HTMLElement {
                         const vDisabled = !v.available ? ' disabled' : '';
                         const vSelected = v.id === defaultVariant.id ? ' selected' : '';
                         const vLabel = v.title + (v.available ? ` — ${currencySymbol}${(toFiniteNumber(v.price, 0) / 100).toFixed(2)}` : ` (${tOutOfStock})`);
-                        cardHtml += `<option value="${v.id}" data-price="${v.price}"${vDisabled}${vSelected}>${escapeHtml(vLabel)}</option>`;
+                        cardHtml += `<option value="${v.id}" data-price="${v.price}" data-variant-title="${escapeHtml(v.title)}"${vDisabled}${vSelected}>${escapeHtml(vLabel)}</option>`;
                     });
                     cardHtml += `</select>`;
                 }
@@ -340,6 +343,7 @@ class PgbBundlePicker extends HTMLElement {
                 const checkbox = card.querySelector('.pgb-checkbox');
                 const selectedOption = sel.options[sel.selectedIndex];
                 const variantPrice = parseFloat(selectedOption.dataset.price) / 100;
+                const variantTitle = selectedOption.dataset.variantTitle || '';
 
                 let discount = parseFloat(sel.dataset.baseDiscount) || 0;
                 let variantDiscounts = [];
@@ -358,14 +362,60 @@ class PgbBundlePicker extends HTMLElement {
                 // Update the variant ID on the checkbox
                 checkbox.setAttribute('data-variant-id', sel.value);
                 checkbox.setAttribute('data-discount', discount);
+                checkbox.setAttribute('data-price', variantPrice);
+                checkbox.setAttribute('data-variant-title', variantTitle);
 
                 // Update displayed prices
                 const oldPriceEl = card.querySelector('.pgb-old-price');
                 const newPriceEl = card.querySelector('.pgb-new-price');
                 if (oldPriceEl) oldPriceEl.textContent = `${currency}${variantPrice.toFixed(2)}`;
                 if (newPriceEl) newPriceEl.textContent = `${currency}${Math.max(0, variantPrice - discount).toFixed(2)}`;
+
+                this.emitChangeEvent();
             });
         });
+
+        // Attach checkbox change listeners
+        this.querySelectorAll('.pgb-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                this.emitChangeEvent();
+            });
+        });
+
+        // Emit initial state
+        this.emitChangeEvent();
+    }
+
+    emitChangeEvent() {
+        const checkedBoxes = Array.from(this.querySelectorAll('.pgb-checkbox:checked'));
+        let totalPrice = 0;
+        const selectedItems = checkedBoxes.map(box => {
+            const price = parseFloat(box.getAttribute('data-price') || '0');
+            const discount = parseFloat(box.getAttribute('data-discount') || '0');
+            const finalPrice = Math.max(0, price - discount);
+            totalPrice += finalPrice;
+
+            return {
+                productId: box.getAttribute('data-product-id'),
+                variantId: box.getAttribute('data-variant-id'),
+                groupId: box.getAttribute('data-group-id'),
+                productTitle: box.getAttribute('data-product-title'),
+                variantTitle: box.getAttribute('data-variant-title'),
+                originalPrice: price,
+                discount: discount,
+                finalPrice: finalPrice
+            };
+        });
+
+        const eventDetail = {
+            selectedItems,
+            totalPrice
+        };
+
+        this.dispatchEvent(new CustomEvent('pgb:bundle-changed', {
+            bubbles: true,
+            detail: eventDetail
+        }));
     }
 
     interceptAddToCart() {

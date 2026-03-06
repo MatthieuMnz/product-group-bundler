@@ -1,7 +1,3 @@
-.product-information__grid:not(.product-information__grid--half, .product-information--media-none).product-information--media-left {
-  grid-template-columns: 2fr 2fr !important;
-}
-
 /* ============================================================
    Product Group Bundler — Bundle Picker
    Design tokens aligned with Horizon iCarsoft theme (STYLE-GUIDE.md)
