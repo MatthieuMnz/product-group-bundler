@@ -38,7 +38,6 @@ pgb-bundle-picker,
 pgb-bundle-picker,
 .pgb-bundle-picker {
   display: block;
-  margin: var(--pgb-spacing-xl) 0;
   font-family: var(--pgb-font-family);
   font-size: var(--pgb-font-size-md);
   color: var(--pgb-foreground);
