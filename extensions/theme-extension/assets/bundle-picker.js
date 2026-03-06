@@ -154,7 +154,7 @@ class PgbBundlePicker extends HTMLElement {
         }
     }
 
-    renderSkeleton(config, heading) {
+    renderSkeleton(config) {
         const groupCount = config.groups ? config.groups.length : 1;
         let html = '';
         html += '<div class="pgb-groups-wrapper">';
