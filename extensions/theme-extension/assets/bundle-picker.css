@@ -11,7 +11,7 @@ pgb-bundle-picker,
   --pgb-foreground: var(--color-foreground, #15151e);
   --pgb-foreground-subdued: #6d7175;
   --pgb-background: var(--color-background, #ffffff);
-  --pgb-background-secondary: #f9f7f6;
+  --pgb-background-secondary: #f5f5f7;
   --pgb-border: var(--color-border, #efefef);
   --pgb-border-hover: #d1d5db;
   --pgb-radius-sm: 4px;
